@@ -1,0 +1,311 @@
+<form class="{{cssClass}} sw25-character-sheet sw25-official-sheet" autocomplete="off">
+  <nav class="sheet-tabs official-tabs" data-group="primary-tabs">
+    <button type="button" class="tab-button active" data-tab="overview">Page One</button>
+    <button type="button" class="tab-button" data-tab="combat">Page Two</button>
+    {{#each classTabs as |classTab|}}<button type="button" class="tab-button" data-tab="{{classTab.id}}">{{classTab.label}}</button>{{/each}}
+    <span class="rest-controls"><button type="button" data-action="rest" data-hours="3" title="Recover 10% maximum HP and half maximum MP"><i class="fas fa-bed"></i> 3 Hour Rest</button><button type="button" data-action="rest" data-hours="6" title="Recover 20% maximum HP and all MP"><i class="fas fa-bed"></i> 6 Hour Rest</button></span>
+  </nav>
+
+  <section class="tab-content official-tab-content">
+    <div class="sheet-tab active" data-tab-panel="overview">
+      <div class="official-page official-page-one">
+        <section class="paper-panel class-box">
+          <h2>Class <button type="button" class="panel-add" data-action="add-class"><i class="fas fa-plus"></i></button></h2>
+          <div class="class-table-head"><span>Class Name</span><span>Cost</span><span>Type</span><span>Level</span></div>
+          <div class="paper-list class-paper-list">
+            {{#each classes as |item|}}
+            <div class="paper-row class-row" data-item-id="{{item.id}}">
+              <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+              <span>{{item.system.category}}</span><span>{{item.displayClassType}}</span>
+              <input type="number" data-action="edit-class-level" value="{{item.system.level}}" min="0" title="Level">
+            </div>
+            {{else}}<p class="paper-empty">No classes</p>{{/each}}
+          </div>
+          <div class="paper-subbox xp-strip">
+            <label>Experience Points<input type="number" name="system.xp.total" value="{{system.xp.total}}"></label>
+            <span>Spent {{calculated.spentXP}}</span><span>Remaining {{calculated.remainingXP}}</span>
+          </div>
+          <div class="automatic-feats"><span>Automatic Failures</span>{{#each automaticFeatureSlots as |slot|}}<input type="checkbox" data-action="toggle-automatic-failure" data-index="{{slot.index}}" {{checked slot.checked}}>{{/each}}<span class="adventurer-label">Adventurer Level</span><strong class="adventurer-orb" title="Adventurer Level">{{calculated.adventurerLevel}}</strong></div>
+        </section>
+
+        <section class="portrait-column">
+          <div class="logo-box"><img class="official-logo" src="systems/sword-world-25/assets/sword-world-logo.png" alt="Sword World"></div>
+          <div class="portrait-frame">
+            <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="Character portrait">
+          </div>
+          <div class="name-plaque"><input type="text" name="name" value="{{actor.name}}" placeholder="Character Name"></div>
+        </section>
+
+        <section class="paper-panel biography-box">
+          <h2>Character Biography</h2>
+          <div class="bio-triple">
+            <label class="race-field"><span>Race</span><span class="inline-edit"><input type="text" data-action="edit-race-name" value="{{race.name}}" placeholder="Race"><button type="button" class="mini-plus" data-action="import-race" title="Import race"><i class="fas fa-file-import"></i></button></span></label>
+            <label><span>Age</span><input type="text" name="system.biography.age" value="{{system.biography.age}}"></label>
+            <label><span>Gender</span><input type="text" name="system.biography.gender" value="{{system.biography.gender}}"></label>
+          </div>
+          <label><span>Reputation Points</span><input type="number" name="system.biography.reputation" value="{{system.biography.reputation}}"></label>
+          <label><span>Rank</span><input type="text" name="system.biography.rank" value="{{system.biography.rank}}"></label>
+          <div class="bio-double">
+            <label><span>Sword Shards</span><input type="number" name="system.biography.swordShards" value="{{system.biography.swordShards}}"></label>
+            <div class="soulscar-mini"><span>Soulscars</span><div>{{#each soulscarCircles as |circle|}}<button type="button" class="soulscar-circle {{#if circle.active}}active{{/if}}" data-action="set-soulscars" data-value="{{circle.value}}"></button>{{/each}}</div></div>
+          </div>
+          <label class="background-line"><span>Background</span><input type="text" name="system.background.name" data-direct-path="system.background.name" value="{{system.background.name}}"></label>
+          <textarea name="system.biography.notes" placeholder="Biography and background notes">{{system.biography.notes}}</textarea>
+        </section>
+
+        <section class="paper-panel skills-box">
+          <h2>Skills</h2>
+          <div class="skill-head"><span>Skill Name</span><span>Time</span><span>Class</span><span>Level</span><span>Mod</span></div>
+          <div class="official-skill-groups">
+            <h3>Dexterity <small>Ability Score Bonus {{calculated.bonuses.dexterity}}</small></h3>
+            {{#each skillsByAbility.dexterity as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
+            <h3>Agility <small>Ability Score Bonus {{calculated.bonuses.agility}}</small></h3>
+            {{#each skillsByAbility.agility as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
+            <h3>Strength <small>Ability Score Bonus {{calculated.bonuses.strength}}</small></h3>
+            {{#each skillsByAbility.strength as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
+            <h3>Intelligence <small>Ability Score Bonus {{calculated.bonuses.intelligence}}</small></h3>
+            {{#each skillsByAbility.intelligence as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
+            <h3>Spirit <small>Ability Score Bonus {{calculated.bonuses.spirit}}</small></h3>
+            {{#each skillsByAbility.spirit as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
+          </div>
+        </section>
+
+        <section class="paper-panel ability-score-box">
+          <h2>Ability Scores</h2>
+          <div class="ability-groups">
+            {{#each officialAbilities as |group|}}
+            <div class="ability-group">
+              <div class="base-diamond"><span>{{group.group}}</span><input type="number" name="system.abilityBases.{{group.baseKey}}" data-direct-path="system.abilityBases.{{group.baseKey}}" value="{{group.base}}"></div>
+              <div class="ability-pair-official">
+                {{#each group.abilities as |ability|}}
+                <div class="ability-tower">
+                  <label class="adjust-diamond"><span>Adjust</span><input type="number" name="system.abilityAdjustments.{{ability.key}}.correction" value="{{ability.correction}}"></label>
+                  <label class="growth-box"><span>Growth</span><input type="number" name="system.abilityAdjustments.{{ability.key}}.growth" value="{{ability.growth}}"></label>
+                  <div class="score-octagon"><span>{{ability.name}}</span><strong>{{ability.score}}</strong></div>
+                  <div class="bonus-orb"><span>Bonus</span><strong>{{ability.bonus}}</strong></div>
+                </div>
+                {{/each}}
+              </div>
+            </div>
+            {{/each}}
+          </div>
+        </section>
+
+        <section class="paper-panel inventory-box">
+          <h2>Inventory <button type="button" class="panel-add" data-action="add-inventory"><i class="fas fa-plus"></i></button></h2>
+          <h3>Items</h3>
+          <div class="inventory-lines">{{#each inventoryItems as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>{{item.type}}</span><span>×{{item.system.quantity}}</span></div>{{else}}<p class="paper-empty">No items</p>{{/each}}</div>
+          <h3>Consumables</h3>
+          <div class="inventory-lines consumable-lines">{{#each consumables as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><input type="number" value="{{item.system.quantity}}" disabled></div>{{else}}<p class="paper-empty">No consumables</p>{{/each}}</div>
+          <h3>Money / Debt</h3>
+          <label class="money-line"><span>Gamels <strong>{{system.currency.gamels}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="gamels" placeholder="+/- amount"></label>
+          <label class="money-line"><span>Debt <strong>{{system.currency.debt}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="debt" placeholder="+/- amount"></label>
+        </section>
+
+        <section class="paper-panel languages-box"><h2>Languages <button type="button" class="panel-add" data-action="add-language"><i class="fas fa-plus"></i></button></h2><div class="language-head"><span></span><span>Talk</span><span>Read</span></div>{{#each languages as |language|}}<div class="language-line"><input type="text" data-action="edit-language" data-index="{{@index}}" data-field="name" value="{{language.name}}"><input type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="talk" {{checked language.talk}}><input type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="read" {{checked language.read}}><button type="button" class="row-delete" data-action="remove-language" data-index="{{@index}}" title="Remove language"><i class="fas fa-times"></i></button></div>{{else}}<p class="paper-empty">No languages</p>{{/each}}</section>
+      </div>
+    </div>
+
+    <div class="sheet-tab" data-tab-panel="combat">
+      <div class="official-page official-page-two">
+        <section class="paper-panel special-box"><h2>Special Combat Modifiers</h2><div class="special-grid">
+<label><span>Sage Level</span><input type="number" name="system.combat.sageLevel" value="{{calculated.sageLevel}}" min="0"></label>
+<button type="button" data-action="roll-check" data-check="monsterKnowledge"><span>Monster Knowledge</span><strong>{{calculated.monsterKnowledge}}</strong></button>
+<label><span>Scout Level</span><input type="number" name="system.combat.scoutLevel" value="{{calculated.scoutLevel}}" min="0"></label>
+<button type="button" data-action="roll-check" data-check="initiative"><span>Initiative</span><strong>{{calculated.initiative}}</strong></button>
+</div></section>
+        <section class="paper-panel movement-box"><h2>Movement</h2><div class="movement-track"><label>Limited Move<input type="number" value="3" disabled></label><label>Normal Move<input type="number" name="system.combat.movement" value="{{system.combat.movement}}"></label><label>Full Move<input type="number" value="{{calculated.fullMove}}" disabled></label></div><input type="text" name="system.combat.movementEnhancements" value="{{system.combat.movementEnhancements}}" placeholder="Movement enhancements"></section>
+        <section class="paper-panel hp-box">
+          <div class="resource-heart">
+            <div class="resource-heart-inner">
+              <div class="resource-title">HP</div>
+              <div class="resource-subtitle">(Hit Points)</div>
+              <div class="resource-value-line">
+                <input class="resource-current" type="number" name="system.hp.value" value="{{system.hp.value}}" aria-label="Current HP">
+                <span class="resource-divider">/</span>
+                <input class="resource-max" type="number" name="system.hp.max" value="{{calculated.hpMax}}" aria-label="Maximum HP">
+              </div>
+              <div class="resource-max-caption">MAX HP</div>
+            </div>
+          </div>
+          <small>Adventurer Level × 3 + Vitality</small>
+        </section>
+        <section class="paper-panel accessories-box"><h2>Accessories</h2><div class="accessory-table"><div><strong>Section</strong><strong>Accessory</strong></div>{{#each accessoryRows as |row|}}<label><span>{{row.label}}</span><input type="text" name="system.accessories.{{row.key}}" value="{{row.value}}"></label>{{/each}}</div></section>
+        <section class="paper-panel defense-box"><h2>Defensive Combat Stats <button type="button" class="panel-add" data-action="add-armour"><i class="fas fa-plus"></i></button></h2><div class="defense-selector evasion-builder"><label>Defense Class<select data-action="select-defense-class"><option value="">—</option>{{#each defenseClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select></label><span>Class Lv <strong>{{calculated.defenseClassLevel}}</strong></span><span>Agility Bonus <strong>{{calculated.bonuses.agility}}</strong></span><label>Situational Evasion Modifier <input type="number" name="system.combat.situationalEvasion" value="{{calculated.situationalEvasion}}"></label></div><div class="defense-table"><div class="def-head"><span>Armour / Shield</span><span title="Equipped">Eq</span><span title="Minimum Strength">STR</span><span title="Evasion">Eva</span><span title="Defense">Def</span><span title="Magical Defense">M.Def</span><span aria-label="Delete" title="Delete"><i class="fas fa-trash"></i></span></div>{{#each armour as |item|}}<div class="armour-entry" data-item-id="{{item.id}}"><div class="armour-name-cell"><button type="button" class="paper-link" data-action="toggle-armour">{{item.name}}</button>{{#if item.system.notes}}<small>{{item.system.notes}}</small>{{/if}}</div><label class="armour-equipped" title="Only equipped armour applies its modifiers"><input type="checkbox" data-action="toggle-armour-equipped" {{checked item.system.equipped}}><span class="sr-only">Equipped</span></label><span>{{item.system.minStrength}}</span><span>{{item.system.evasion}}</span><span>{{item.system.defence}}</span><span>{{item.system.magicalDefence}}</span><button type="button" class="armour-delete" data-action="delete-armour" title="Delete armour"><i class="fas fa-trash"></i></button></div>{{else}}<p class="paper-empty">No armour</p>{{/each}}</div><div class="defense-totals"><span>Defense <strong>{{calculated.defense}}</strong></span><span>Magical Defense <strong>{{calculated.magicalDefense}}</strong></span></div><div class="resistance-strip"><button type="button" data-action="roll-check" data-check="fortitude">Fortitude <strong>{{calculated.fortitude}}</strong></button><button type="button" data-action="roll-check" data-check="willpower">Willpower <strong>{{calculated.willpower}}</strong></button><button type="button" data-action="roll-check" data-check="evasion">Evasion <strong>{{calculated.evasion}}</strong></button></div></section>
+        <section class="paper-panel magic-box"><h2>Spells &amp; Magic</h2>
+          <div class="mp-crystal">
+            <div class="mp-crystal-inner">
+              <div class="resource-title">MP</div>
+              <div class="resource-subtitle">(Mana Points)</div>
+              <div class="resource-value-line">
+                <input class="resource-current" type="number" name="system.mp.value" value="{{system.mp.value}}" aria-label="Current MP">
+                <span class="resource-divider">/</span>
+                <input class="resource-max" type="number" value="{{calculated.mpMax}}" disabled aria-label="Maximum MP">
+              </div>
+              <div class="resource-max-caption">MAX MP</div>
+            </div>
+          </div>
+          <div class="page-two-magic-power"><select data-action="select-magic-class" aria-label="Wizard class"><option value="">— Wizard Class —</option>{{#each magicClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select><button type="button" class="magic-power-roll" data-action="roll-check" data-check="magicPower">Magic Power <strong>{{calculated.magicPower}}</strong></button></div><div class="magic-list">{{#each spells as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>Lv {{item.system.level}}</span><span>MP {{item.system.mpCost}}</span><button type="button" data-action="cast-spell">Cast</button></div>{{else}}<p class="paper-empty">No spells</p>{{/each}}</div></section>
+        <section class="paper-panel feats-box">
+          <h2>Combat Feats <button type="button" class="panel-add" data-action="add-feat"><i class="fas fa-plus"></i></button></h2>
+          <div class="feat-list">
+            <div class="feat-row feat-head">
+              <span>Name</span><span>Prerequisite</span><span>Use</span><span></span>
+            </div>
+            {{#each feats as |item|}}
+              <div class="feat-entry" data-item-id="{{item.id}}">
+                <div class="feat-row">
+                  <button type="button" class="paper-link feat-name" data-action="toggle-feat">{{item.name}}</button>
+                  <span class="feat-prerequisite">{{item.system.prerequisite}}</span>
+                  <span class="feat-use">{{item.system.use}}</span>
+                  <span class="feat-actions">
+                    <button type="button" class="feat-edit" data-action="edit-item" title="Edit feat"><i class="fas fa-pen"></i></button>
+                    <button type="button" class="feat-delete" data-action="delete-item" title="Delete feat"><i class="fas fa-trash"></i></button>
+                  </span>
+                </div>
+                <div class="feat-details">
+                  <strong>Summary</strong>
+                  <p>{{#if item.system.summary}}{{item.system.summary}}{{else}}{{item.system.description}}{{/if}}</p>
+                  {{#if item.system.sourceUrl}}<small>{{item.system.sourceUrl}}</small>{{/if}}
+                </div>
+              </div>
+            {{else}}
+              <p class="paper-empty">No combat feats</p>
+            {{/each}}
+          </div>
+        </section>
+
+        <section class="paper-panel weapons-box">
+          <h2>Weapons <button type="button" class="panel-add" data-action="add-weapon" title="Add weapon"><i class="fas fa-plus"></i></button></h2>
+          <div class="weapon-list">
+            <div class="weapon-row weapon-head">
+              <span>Name</span><span>Stance</span><span>Min STR</span><span>Acc</span><span>Power</span><span>Crit</span><span>Add. Dmg</span><span></span>
+            </div>
+            {{#each weapons as |item|}}
+              <div class="weapon-entry weapon-row" data-item-id="{{item.id}}">
+                <button type="button" class="paper-link weapon-roll" data-action="roll-weapon">{{item.name}}</button>
+                <span>{{item.system.stance}}</span>
+                <span>{{item.system.minStrength}}</span>
+                <span>{{item.system.accuracy}}</span>
+                <span>{{item.system.power}}</span>
+                <span>{{item.system.critical}}</span>
+                <span>{{item.system.additionalDamage}}</span>
+                <span class="weapon-actions">
+                  <button type="button" data-action="edit-item" title="Edit weapon"><i class="fas fa-pen"></i></button>
+                  <button type="button" data-action="delete-weapon" title="Delete weapon"><i class="fas fa-trash"></i></button>
+                </span>
+              </div>
+            {{else}}
+              <p class="paper-empty">No weapons</p>
+            {{/each}}
+          </div>
+        </section>
+
+        <div class="page-two-corner">
+        <section class="paper-panel abilities-box">
+          <h2>Racial Abilities</h2>
+          <div class="racial-ability-list">
+            {{#each racialAbilities as |item|}}
+              <div class="additional-row" data-item-id="{{item.id}}">
+                <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+                <button type="button" class="row-delete" data-action="delete-item" title="Delete racial ability"><i class="fas fa-times"></i></button>
+              </div>
+            {{else}}
+              <p class="paper-empty">No racial abilities</p>
+            {{/each}}
+          </div>
+        </section>
+        <section class="paper-panel work-skills-box">
+          <h2>Work Skills <button type="button" class="panel-add" data-action="add-work-skill" title="Add work skill"><i class="fas fa-plus"></i></button></h2>
+          <div class="work-skills-list">
+            {{#each workSkills as |skill|}}
+            <div class="work-skill-entry {{#if skill.expanded}}expanded{{/if}}" data-work-skill-index="{{skill.skillIndex}}" data-work-skill-id="{{skill.id}}">
+              <div class="work-skill-header">
+                <button type="button" class="paper-link" data-action="toggle-work-skill">{{skill.name}}</button>
+                <label>Lv <input type="number" data-action="edit-work-skill" data-skill-index="{{skill.skillIndex}}" data-field="level" value="{{skill.level}}" min="0"></label>
+                <label>XP <input type="number" data-action="edit-work-skill" data-skill-index="{{skill.skillIndex}}" data-field="xp" value="{{skill.xp}}" min="0"></label>
+                <button type="button" data-action="add-work-check" data-skill-index="{{skill.skillIndex}}" title="Add skill check"><i class="fas fa-plus"></i></button>
+                <button type="button" data-action="delete-work-skill" data-skill-index="{{skill.skillIndex}}" title="Delete work skill"><i class="fas fa-trash"></i></button>
+              </div>
+              <div class="work-skill-details">
+                <label>Name <input type="text" data-action="edit-work-skill" data-skill-index="{{skill.skillIndex}}" data-field="name" value="{{skill.name}}"></label>
+                <label>Description <textarea data-action="edit-work-skill" data-skill-index="{{skill.skillIndex}}" data-field="description">{{skill.description}}</textarea></label>
+                <div class="work-checks-list">
+                  {{#each skill.checks as |check|}}
+                  <div class="work-check-entry {{#if check.expanded}}expanded{{/if}}" data-work-check-key="{{skill.id}}:{{check.id}}">
+                    <div class="work-check-row">
+                      <button type="button" class="paper-link" data-action="toggle-work-check">{{check.name}}</button>
+                      <input type="text" data-action="edit-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" data-field="time" value="{{check.time}}" title="Time required">
+                      <select data-action="edit-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" data-field="ability">{{#each check.abilityOptions as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select>
+                      <button type="button" data-action="roll-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" title="Roll check"><i class="fas fa-dice-d6"></i></button>
+                      <button type="button" data-action="delete-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" title="Delete check"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="work-check-details"><label>Name <input type="text" data-action="edit-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" data-field="name" value="{{check.name}}"></label><label>Description <textarea data-action="edit-work-check" data-skill-index="{{skill.skillIndex}}" data-check-index="{{check.checkIndex}}" data-field="description">{{check.description}}</textarea></label></div>
+                  </div>
+                  {{else}}<p class="paper-empty">No skill checks</p>{{/each}}
+                </div>
+              </div>
+            </div>
+            {{else}}<p class="paper-empty">No work skills</p>{{/each}}
+          </div>
+        </section>
+        </div>
+        <section class="paper-panel offense-box"><h2>Offensive Combat Stats <button type="button" class="panel-add" data-action="add-weapon"><i class="fas fa-plus"></i></button></h2><div class="offense-selector"><label>Attacking Class<select data-action="select-offense-class"><option value="">—</option>{{#each offenseClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select></label><label>Accuracy Mod <input type="number" name="system.combat.accuracyMod" value="{{system.combat.accuracyMod}}"></label><button type="button" data-action="roll-check" data-check="accuracy">Accuracy <strong>{{calculated.accuracy}}</strong></button><label>Additional Damage <input type="number" name="system.combat.additionalDamage" value="{{system.combat.additionalDamage}}"></label></div><div class="weapon-table">
+          <div class="weapon-head">
+            <span>Weapon</span><span>Stance</span><span>Min STR</span><span>Accuracy</span><span>Power</span><span class="power-result-heading">3</span><span class="power-result-heading">4</span><span class="power-result-heading">5</span><span class="power-result-heading">6</span><span class="power-result-heading">7</span><span class="power-result-heading">8</span><span class="power-result-heading">9</span><span class="power-result-heading">10</span><span class="power-result-heading">11</span><span class="power-result-heading">12</span><span>Crit</span><span>Add. Damage</span><span>Roll</span><span>Delete</span>
+          </div>
+          {{#each weapons as |item|}}
+            <div class="combat-weapon-row" data-item-id="{{item.id}}">
+              <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+              <span>{{#if item.system.stance}}{{item.system.stance}}{{else}}{{item.system.usage}}{{/if}}</span>
+              <span>{{item.system.minStrength}}</span>
+              <span>{{item.system.accuracy}}</span>
+              <span>{{item.system.power}}</span>
+              {{#if item.system.artificerPowered}}
+                <span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span><span class="power-result">-</span>
+              {{else}}
+                <span class="power-result">{{lookup item.system.powerTable "3"}}</span><span class="power-result">{{lookup item.system.powerTable "4"}}</span><span class="power-result">{{lookup item.system.powerTable "5"}}</span><span class="power-result">{{lookup item.system.powerTable "6"}}</span><span class="power-result">{{lookup item.system.powerTable "7"}}</span><span class="power-result">{{lookup item.system.powerTable "8"}}</span><span class="power-result">{{lookup item.system.powerTable "9"}}</span><span class="power-result">{{lookup item.system.powerTable "10"}}</span><span class="power-result">{{lookup item.system.powerTable "11"}}</span><span class="power-result">{{lookup item.system.powerTable "12"}}</span>
+              {{/if}}
+              <span>{{item.system.critical}}</span>
+              <span>{{item.system.additionalDamage}}</span>
+              {{#if item.system.artificerPowered}}<span title="Damage is rolled through a bullet spell">-</span>{{else}}<button type="button" data-action="roll-weapon" title="Roll weapon damage"><i class="fas fa-dice-d6"></i></button>{{/if}}
+              <button type="button" class="weapon-trash" data-action="delete-weapon" title="Delete weapon"><i class="fas fa-trash"></i></button>
+            </div>
+          {{else}}
+            <p class="paper-empty">No weapons</p>
+          {{/each}}
+        </div></section>
+      </div>
+    </div>
+
+    {{#each classTabs as |classTab|}}
+    <div class="sheet-tab" data-tab-panel="{{classTab.id}}">
+      <div class="official-page class-feature-page">
+        {{#if classTab.isWizard}}<section class="paper-panel class-casting-summary"><h2>{{classTab.label}} Casting</h2><button type="button" class="magic-power-roll" data-action="roll-class-magic-power" data-class-id="{{classTab.classId}}">Magic Power <strong>{{classTab.magicPower}}</strong></button><span>Class Level {{classTab.classLevel}} + Intelligence Modifier</span></section>{{/if}}
+        {{#if classTab.isGeomancer}}<section class="paper-panel class-resource-summary"><h2>Qi</h2><label>Heavenly Qi<input type="number" name="system.classResources.geomancer.heavenly" value="{{../system.classResources.geomancer.heavenly}}" min="0"></label><label>Earthly Qi<input type="number" name="system.classResources.geomancer.earthly" value="{{../system.classResources.geomancer.earthly}}" min="0"></label><label>Spirit Qi<input type="number" name="system.classResources.geomancer.spirit" value="{{../system.classResources.geomancer.spirit}}" min="0"></label><button type="button" class="resource-mini-button" data-action="increase-all-qi"><i class="fas fa-plus"></i> All</button><button type="button" class="resource-mini-button" data-action="reset-qi"><i class="fas fa-rotate-left"></i> Reset</button></section>{{/if}}
+        {{#if classTab.isAlchemist}}<section class="paper-panel alchemist-card-summary"><h2>Material Cards</h2><div class="material-card-head"><span>Colour</span><span>B</span><span>A</span><span>S</span><span>SS</span></div>{{#each classTab.materialCardRows as |row|}}<div class="material-card-row"><strong>{{row.label}}</strong>{{#each row.cells as |cell|}}<input type="number" name="{{cell.path}}" value="{{cell.value}}" min="0" title="{{row.label}} {{cell.rankLabel}}-Rank">{{/each}}</div>{{/each}}</section>{{/if}}
+        {{#if classTab.isBard}}<section class="paper-panel class-resource-summary"><h2>Rhythm</h2><label>Uplifting ⮭<input type="number" name="system.classResources.bard.uplifting" value="{{../system.classResources.bard.uplifting}}" min="0"><button type="button" class="resource-increment" data-action="increase-rhythm" data-rhythm="uplifting">+</button></label><label>Calming ⮯<input type="number" name="system.classResources.bard.calming" value="{{../system.classResources.bard.calming}}" min="0"><button type="button" class="resource-increment" data-action="increase-rhythm" data-rhythm="calming">+</button></label><label>Enchanting ♡<input type="number" name="system.classResources.bard.enchanting" value="{{../system.classResources.bard.enchanting}}" min="0"><button type="button" class="resource-increment" data-action="increase-rhythm" data-rhythm="enchanting">+</button></label></section>{{/if}}
+        {{#if classTab.isDarkHunter}}<section class="paper-panel class-resource-summary"><h2>Mental Power</h2><strong class="class-resource-value">{{classTab.mentalPower}}</strong><span>Dark Hunter Level + Spirit Modifier</span></section>{{/if}}
+        {{#if classTab.isTactician}}<section class="paper-panel class-resource-summary"><h2>Edge</h2><label>Current Edge<input type="number" name="system.classResources.tactician.edge" value="{{../system.classResources.tactician.edge}}" min="0"></label><button type="button" class="resource-mini-button" data-action="increase-edge"><i class="fas fa-plus"></i> Edge</button></section>{{/if}}
+        {{#each classTab.sections as |section|}}
+        <section class="paper-panel class-feature-box">
+          <h2>{{section.label}} <span class="class-feature-heading-actions"><button type="button" class="panel-add" data-action="add-class-feature-manually" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" title="Add {{section.label}} manually"><i class="fas fa-plus"></i></button><button type="button" class="panel-add" data-action="import-class-feature" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" data-prefix="{{section.prefix}}" title="Import {{section.label}}"><i class="fas fa-file-import"></i></button></span></h2>
+          <div class="class-feature-head"><span>Name</span><span>Requirement</span><span>Cost</span><span>Actions</span></div>
+          <div class="class-feature-list">
+            {{#each section.items as |item|}}
+            <div class="class-feature-row" data-item-id="{{item.id}}">
+              <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+              <span>{{#if item.system.requirement}}{{item.system.requirement}}{{else}}—{{/if}}</span>
+              <span>{{#if item.classFeatureCost}}{{item.classFeatureCost}}{{else}}{{#if item.system.mpCost}}MP {{item.system.mpCost}}{{else}}—{{/if}}{{/if}}</span>
+              <span class="class-feature-actions">{{#if (eq section.key "spell")}}<button type="button" data-action="cast-spell" title="Cast spell"><i class="fas fa-wand-magic-sparkles"></i></button>{{else}}<button type="button" data-action="post-class-feature" title="Post to chat"><i class="fas fa-comment"></i></button>{{/if}}<button type="button" class="row-delete" data-action="delete-item" title="Delete"><i class="fas fa-trash"></i></button></span>
+            </div>
+            {{else}}<p class="paper-empty">No {{section.label}}</p>{{/each}}
+          </div>
+        </section>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+
+  </section>
+</form>

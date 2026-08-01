@@ -1,0 +1,300 @@
+{
+  "Actor": {
+    "types": [
+      "character",
+      "monster"
+    ],
+    "character": {
+      "soulscars": 0,
+      "hp": {
+        "value": 0,
+        "max": 0
+      },
+      "mp": {
+        "value": 0,
+        "max": 0
+      },
+      "abilityBases": {
+        "skill": 0,
+        "body": 0,
+        "mind": 0
+      },
+      "abilityAdjustments": {
+        "a": {
+          "growth": 0,
+          "correction": 0
+        },
+        "b": {
+          "growth": 0,
+          "correction": 0
+        },
+        "c": {
+          "growth": 0,
+          "correction": 0
+        },
+        "d": {
+          "growth": 0,
+          "correction": 0
+        },
+        "e": {
+          "growth": 0,
+          "correction": 0
+        },
+        "f": {
+          "growth": 0,
+          "correction": 0
+        }
+      },
+      "combat": {
+        "movement": 0,
+        "accuracy": 0,
+        "accuracyMod": 0,
+        "evasion": 0,
+        "initiative": 0,
+        "magicPower": 0,
+        "fortitude": 0,
+        "willpower": 0,
+        "monsterKnowledge": 0,
+        "situationalEvasion": 0,
+        "additionalDamage": 0,
+        "movementEnhancements": "",
+        "defenseClassId": "",
+        "offenseClassId": "",
+        "magicClassId": "",
+        "sageLevel": 0,
+        "scoutLevel": 0
+      },
+      "xp": {
+        "total": 0
+      },
+      "currency": {
+        "gamels": 0,
+        "debt": 0
+      },
+      "background": {
+        "name": "",
+        "experience": 0,
+        "sourceRace": ""
+      },
+      "biography": {
+        "title": "",
+        "age": "",
+        "gender": "",
+        "reputation": 0,
+        "rank": "",
+        "swordShards": 0,
+        "notes": ""
+      },
+      "inventory": {
+        "consumables": ""
+      },
+      "notes": "",
+      "languages": [],
+      "languagesInitialized": false,
+      "workSkills": [],
+      "classResources": {
+        "geomancer": { "heavenly": 0, "earthly": 0, "spirit": 0 },
+        "alchemist": {
+          "cards": {
+            "red": { "b": 0, "a": 0, "s": 0, "ss": 0 },
+            "green": { "b": 0, "a": 0, "s": 0, "ss": 0 },
+            "blue": { "b": 0, "a": 0, "s": 0, "ss": 0 },
+            "white": { "b": 0, "a": 0, "s": 0, "ss": 0 },
+            "gold": { "b": 0, "a": 0, "s": 0, "ss": 0 }
+          }
+        },
+        "bard": { "uplifting": 0, "calming": 0, "enchanting": 0 },
+        "tactician": { "edge": 0 }
+      },
+      "skillClasses": {},
+      "accessories": {
+        "head": "",
+        "face": "",
+        "ears": "",
+        "neck": "",
+        "back": "",
+        "rightHand": "",
+        "leftHand": "",
+        "waist": "",
+        "feet": "",
+        "other": ""
+      }
+    },
+    "monster": {
+      "revealed": false,
+      "sourceUrl": "",
+      "level": 0,
+      "monsterType": "",
+      "intelligence": "",
+      "perception": "",
+      "disposition": "",
+      "soulscars": 0,
+      "languages": "",
+      "habitat": "",
+      "reputation": 0,
+      "weakness": 0,
+      "weakPoint": "",
+      "initiative": 0,
+      "movementSpeed": "",
+      "fortitude": "",
+      "willpower": "",
+      "source": "",
+      "description": "",
+      "combatStyles": [],
+      "uniqueSkills": [],
+      "lootTable": []
+    }
+  },
+  "Item": {
+    "types": [
+      "race",
+      "class",
+      "feat",
+      "ability",
+      "weapon",
+      "armour",
+      "skill",
+      "spell",
+      "equipment"
+    ],
+    "class": {
+      "level": 1,
+      "category": "A",
+      "xp": 0,
+      "description": "",
+      "sourceUrl": "",
+      "classType": "",
+      "weaponRestrictions": "",
+      "armourRestrictions": "",
+      "shieldRestrictions": "",
+      "classFeatures": "",
+      "skillPackages": "",
+      "rawText": ""
+    },
+    "feat": {
+      "category": "combat",
+      "description": "",
+      "className": "",
+      "prerequisite": "",
+      "use": "",
+      "summary": "",
+      "sourceUrl": "",
+      "rawText": ""
+    },
+    "ability": {
+      "source": "racial",
+      "classId": "",
+      "className": "",
+      "featureType": "",
+      "requirement": "",
+      "cost": "",
+      "metadata": "",
+      "resourceData": {},
+      "sourceUrl": "",
+      "description": ""
+    },
+    "weapon": {
+      "equipped": false,
+      "usage": "",
+      "accuracy": 0,
+      "accuracyMod": 0,
+      "power": 0,
+      "critical": 10,
+      "description": "",
+      "damageFormula": "2d6",
+      "quantity": 1,
+      "consumable": false,
+      "minStrength": 0,
+      "additionalDamage": 0,
+      "maxMagazine": 0,
+      "range": "",
+      "stance": "",
+      "category": "",
+      "rank": "",
+      "notes": "",
+      "selectedClassId": "",
+      "artificerPowered": false,
+      "powerTable": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0,
+        "11": 0,
+        "12": 0
+      },
+      "sourceUrl": "",
+      "price": 0
+    },
+    "armour": {
+      "equipped": false,
+      "evasion": 0,
+      "defence": 0,
+      "description": "",
+      "magicalDefence": 0,
+      "quantity": 1,
+      "minStrength": 0,
+      "notes": ""
+    },
+    "skill": {
+      "level": 1,
+      "description": ""
+    },
+    "spell": {
+      "school": "",
+      "level": 1,
+      "mpCost": 0,
+      "power": 0,
+      "critical": 0,
+      "criticalModifier": 0,
+      "hasPowerTable": false,
+      "powerTable": {
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 0,
+        "11": 0,
+        "12": 0
+      },
+      "classId": "",
+      "className": "",
+      "featureType": "spell",
+      "requirement": "",
+      "cost": "",
+      "metadata": "",
+      "sourceUrl": "",
+      "description": ""
+    },
+    "equipment": {
+      "quantity": 1,
+      "equipped": false,
+      "description": "",
+      "consumable": false
+    },
+    "race": {
+      "sourceUrl": "",
+      "description": "",
+      "languages": "",
+      "restrictedClasses": "",
+      "lifespan": "",
+      "soulscars": 0,
+      "corrections": {
+        "a": "",
+        "b": "",
+        "c": "",
+        "d": "",
+        "e": "",
+        "f": ""
+      },
+      "backgrounds": "",
+      "rawText": ""
+    }
+  }
+}

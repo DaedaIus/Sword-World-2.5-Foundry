@@ -1,0 +1,154 @@
+<form class="{{cssClass}} sw25-item-sheet" autocomplete="off">
+  <header class="item-sheet-header dark-header">
+    <input class="item-title" type="text" name="name" value="{{item.name}}">
+    <span class="item-type">{{item.type}}</span>
+  </header>
+
+  <section class="item-fields">
+    {{#if isRace}}
+      <label>Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+      <label>Soulscars <input type="number" name="system.soulscars" value="{{system.soulscars}}" min="0"></label>
+      <label class="wide-field">Starting Languages <input type="text" name="system.languages" value="{{system.languages}}"></label>
+      <label class="wide-field">Restricted Classes <input type="text" name="system.restrictedClasses" value="{{system.restrictedClasses}}"></label>
+      <label class="wide-field">Lifespan / Adulthood <input type="text" name="system.lifespan" value="{{system.lifespan}}"></label>
+      <div class="race-corrections wide-field">
+        <strong>Ability Score Corrections</strong>
+        <div class="race-correction-grid">
+          <label>A<input type="text" name="system.corrections.a" value="{{system.corrections.a}}"></label>
+          <label>B<input type="text" name="system.corrections.b" value="{{system.corrections.b}}"></label>
+          <label>C<input type="text" name="system.corrections.c" value="{{system.corrections.c}}"></label>
+          <label>D<input type="text" name="system.corrections.d" value="{{system.corrections.d}}"></label>
+          <label>E<input type="text" name="system.corrections.e" value="{{system.corrections.e}}"></label>
+          <label>F<input type="text" name="system.corrections.f" value="{{system.corrections.f}}"></label>
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if isClass}}
+      <label>Category
+        <select name="system.category">
+          <option value="A" {{#if (eq system.category "A")}}selected{{/if}}>A</option>
+          <option value="B" {{#if (eq system.category "B")}}selected{{/if}}>B</option>
+        </select>
+      </label>
+      <label>Level <input type="number" name="system.level" value="{{system.level}}" min="0"></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+      <label class="wide-field">Class Type <input type="text" name="system.classType" value="{{system.classType}}"></label>
+      <label class="wide-field">Weapon Restrictions <input type="text" name="system.weaponRestrictions" value="{{system.weaponRestrictions}}"></label>
+      <label class="wide-field">Armour Restrictions <input type="text" name="system.armourRestrictions" value="{{system.armourRestrictions}}"></label>
+      <label class="wide-field">Shield Restrictions <input type="text" name="system.shieldRestrictions" value="{{system.shieldRestrictions}}"></label>
+      <label class="wide-field">Class Features <input type="text" name="system.classFeatures" value="{{system.classFeatures}}"></label>
+      <label class="wide-field">Skill Packages <input type="text" name="system.skillPackages" value="{{system.skillPackages}}"></label>
+    {{/if}}
+
+    {{#if isFeat}}
+      <label>Category
+        <select name="system.category">
+          <option value="combat" {{#if (eq system.category "combat")}}selected{{/if}}>Combat</option>
+          <option value="adventure" {{#if (eq system.category "adventure")}}selected{{/if}}>Adventure</option>
+          <option value="other" {{#if (eq system.category "other")}}selected{{/if}}>Other</option>
+        </select>
+      </label>
+      <label>Prerequisite <input type="text" name="system.prerequisite" value="{{system.prerequisite}}"></label>
+      <label>Use <input type="text" name="system.use" value="{{system.use}}"></label>
+      <label class="wide-field">Summary <textarea name="system.summary">{{system.summary}}</textarea></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+    {{/if}}
+
+    {{#if isAbility}}
+      <label>Source
+        <select name="system.source">
+          <option value="racial" {{#if (eq system.source "racial")}}selected{{/if}}>Racial</option>
+          <option value="class" {{#if (eq system.source "class")}}selected{{/if}}>Class</option>
+        </select>
+      </label>
+      <label>Class <input type="text" name="system.className" value="{{system.className}}"></label>
+      <label>Feature Type <input type="text" name="system.featureType" value="{{system.featureType}}"></label>
+      <label>Requirement <input type="text" name="system.requirement" value="{{system.requirement}}"></label>
+      <label>Cost <input type="text" name="system.cost" value="{{system.cost}}"></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+      <label class="wide-field">Imported Details <textarea name="system.metadata">{{system.metadata}}</textarea></label>
+    {{/if}}
+
+    {{#if isWeapon}}
+      <label>Usage <input type="text" name="system.usage" value="{{system.usage}}"></label>
+      <label>Accuracy <input type="number" name="system.accuracy" value="{{system.accuracy}}"></label>
+      <label>Power <input type="number" name="system.power" value="{{system.power}}"></label>
+      <label>Critical <input type="number" name="system.critical" value="{{system.critical}}"></label>
+      <label>Critical Modifier <input type="number" name="system.criticalModifier" value="{{system.criticalModifier}}"></label>
+      <label>Damage Formula <input type="text" name="system.damageFormula" value="{{system.damageFormula}}" placeholder="2d6"></label>
+      <label class="checkbox-label"><input type="checkbox" name="system.equipped" {{checked system.equipped}}> Equipped</label>
+    
+      <label>Category <input type="text" name="system.category" value="{{system.category}}"></label>
+      <label>Rank <input type="text" name="system.rank" value="{{system.rank}}"></label>
+      <label>Stance <input type="text" name="system.stance" value="{{system.stance}}"></label>
+      <label>Minimum Strength <input type="number" name="system.minStrength" value="{{system.minStrength}}"></label>
+      <label>Accuracy <input type="number" name="system.accuracy" value="{{system.accuracy}}"></label>
+      <label>Power <input type="number" name="system.power" value="{{system.power}}"></label>
+      <label>Critical <input type="number" name="system.critical" value="{{system.critical}}"></label>
+      <label>Additional Damage <input type="number" name="system.additionalDamage" value="{{system.additionalDamage}}"></label>
+      <label>Maximum Magazine <input type="number" name="system.maxMagazine" value="{{system.maxMagazine}}" min="0"></label>
+      <label>Range <input type="text" name="system.range" value="{{system.range}}" placeholder="1(10m)"></label>
+      <label>Artificer-powered <input type="checkbox" name="system.artificerPowered" {{checked system.artificerPowered}}></label>
+      <label class="wide-field">Notes <textarea name="system.notes">{{system.notes}}</textarea></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+      <div class="wide-field weapon-power-table">
+        <strong>Power Table</strong>
+        {{#if system.artificerPowered}}
+        <div class="weapon-power-grid"><label>3<span>-</span></label><label>4<span>-</span></label><label>5<span>-</span></label><label>6<span>-</span></label><label>7<span>-</span></label><label>8<span>-</span></label><label>9<span>-</span></label><label>10<span>-</span></label><label>11<span>-</span></label><label>12<span>-</span></label></div>
+        {{else}}
+        <div class="weapon-power-grid">
+          <label>3<input type="number" name="system.powerTable.3" value="{{lookup system.powerTable "3"}}"></label>
+          <label>4<input type="number" name="system.powerTable.4" value="{{lookup system.powerTable "4"}}"></label>
+          <label>5<input type="number" name="system.powerTable.5" value="{{lookup system.powerTable "5"}}"></label>
+          <label>6<input type="number" name="system.powerTable.6" value="{{lookup system.powerTable "6"}}"></label>
+          <label>7<input type="number" name="system.powerTable.7" value="{{lookup system.powerTable "7"}}"></label>
+          <label>8<input type="number" name="system.powerTable.8" value="{{lookup system.powerTable "8"}}"></label>
+          <label>9<input type="number" name="system.powerTable.9" value="{{lookup system.powerTable "9"}}"></label>
+          <label>10<input type="number" name="system.powerTable.10" value="{{lookup system.powerTable "10"}}"></label>
+          <label>11<input type="number" name="system.powerTable.11" value="{{lookup system.powerTable "11"}}"></label>
+          <label>12<input type="number" name="system.powerTable.12" value="{{lookup system.powerTable "12"}}"></label>
+        </div>
+        {{/if}}
+      </div>
+{{/if}}
+
+    {{#if isArmour}}
+      <label>Evasion <input type="number" name="system.evasion" value="{{system.evasion}}"></label>
+      <label>Defence <input type="number" name="system.defence" value="{{system.defence}}"></label>
+      <label class="checkbox-label"><input type="checkbox" name="system.equipped" {{checked system.equipped}}> Equipped</label>
+    {{/if}}
+
+    {{#if isSkill}}
+      <label>Level <input type="number" name="system.level" value="{{system.level}}" min="0"></label>
+    {{/if}}
+
+    {{#if isSpell}}
+      <button type="button" class="wide-field item-cast-spell" data-action="cast-spell-from-item"><i class="fas fa-wand-magic-sparkles"></i> Cast Spell</button>
+      <label>School <input type="text" name="system.school" value="{{system.school}}"></label>
+      <label>Level <input type="number" name="system.level" value="{{system.level}}" min="0"></label>
+      <label>MP Cost <input type="number" name="system.mpCost" value="{{system.mpCost}}" min="0"></label>
+      <label class="checkbox-label"><input type="checkbox" name="system.hasPowerTable" {{checked system.hasPowerTable}}> Uses Power Table</label>
+      <label>Power <input type="number" name="system.power" value="{{system.power}}"></label>
+      <label>Critical <input type="number" name="system.critical" value="{{system.critical}}"></label>
+      <label>Requirement <input type="text" name="system.requirement" value="{{system.requirement}}"></label>
+      <label>Cost <input type="text" name="system.cost" value="{{system.cost}}"></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
+      <label class="wide-field">Imported Details <textarea name="system.metadata">{{system.metadata}}</textarea></label>
+      {{#if system.hasPowerTable}}<div class="wide-field weapon-power-table"><strong>Power Table</strong><div class="weapon-power-grid"><label>3<input type="number" name="system.powerTable.3" value="{{lookup system.powerTable "3"}}"></label><label>4<input type="number" name="system.powerTable.4" value="{{lookup system.powerTable "4"}}"></label><label>5<input type="number" name="system.powerTable.5" value="{{lookup system.powerTable "5"}}"></label><label>6<input type="number" name="system.powerTable.6" value="{{lookup system.powerTable "6"}}"></label><label>7<input type="number" name="system.powerTable.7" value="{{lookup system.powerTable "7"}}"></label><label>8<input type="number" name="system.powerTable.8" value="{{lookup system.powerTable "8"}}"></label><label>9<input type="number" name="system.powerTable.9" value="{{lookup system.powerTable "9"}}"></label><label>10<input type="number" name="system.powerTable.10" value="{{lookup system.powerTable "10"}}"></label><label>11<input type="number" name="system.powerTable.11" value="{{lookup system.powerTable "11"}}"></label><label>12<input type="number" name="system.powerTable.12" value="{{lookup system.powerTable "12"}}"></label></div></div>{{/if}}
+    {{/if}}
+
+    {{#if isEquipment}}
+      <label>Quantity <input type="number" name="system.quantity" value="{{system.quantity}}" min="0"></label>
+      <label class="checkbox-label"><input type="checkbox" name="system.equipped" {{checked system.equipped}}> Equipped</label>
+    {{/if}}
+  </section>
+
+  {{#if isRace}}
+    <section class="description-field race-backgrounds"><label>Background Table / Imported Notes</label><textarea name="system.backgrounds">{{system.backgrounds}}</textarea></section>
+  {{/if}}
+  <section class="description-field">
+    <label>Description</label>
+    <textarea name="system.description">{{system.description}}</textarea>
+  </section>
+</form>

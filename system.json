@@ -1,0 +1,50 @@
+{
+  "id": "sword-world-25",
+  "title": "Sword World 2.5",
+  "description": "An unstable, hastily made, system for Sword World 2.5",
+  "version": "0.12.6",
+  "authors": [
+    {
+      "name": "Daedalus"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "esmodules": [
+    "sw25.mjs"
+  ],
+  "styles": [
+    {
+      "src": "styles/sw25.css"
+    }
+  ],
+  "documentTypes": {
+    "Actor": {
+      "character": {
+        "htmlFields": [
+          "notes",
+          "biography.notes"
+        ]
+      },
+      "monster": {
+        "htmlFields": ["description"]
+      }
+    },
+    "Item": {
+      "class": { "htmlFields": ["description"] },
+      "feat": { "htmlFields": ["description"] },
+      "ability": { "htmlFields": ["description"] },
+      "weapon": { "htmlFields": ["description"] },
+      "armour": { "htmlFields": ["description"] },
+      "skill": { "htmlFields": ["description"] },
+      "spell": { "htmlFields": ["description"] },
+      "equipment": { "htmlFields": ["description"] },
+      "race": { "htmlFields": ["description"] }
+    }
+  },
+  "initiative": "2d6 + @combat.initiative",
+  "primaryTokenAttribute": "hp",
+  "secondaryTokenAttribute": "mp"
+}
