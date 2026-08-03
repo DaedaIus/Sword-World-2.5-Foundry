@@ -72,9 +72,6 @@
 
     {{#if isWeapon}}
       <label>Usage <input type="text" name="system.usage" value="{{system.usage}}"></label>
-      <label>Accuracy <input type="number" name="system.accuracy" value="{{system.accuracy}}"></label>
-      <label>Power <input type="number" name="system.power" value="{{system.power}}"></label>
-      <label>Critical <input type="number" name="system.critical" value="{{system.critical}}"></label>
       <label>Critical Modifier <input type="number" name="system.criticalModifier" value="{{system.criticalModifier}}"></label>
       <label>Damage Formula <input type="text" name="system.damageFormula" value="{{system.damageFormula}}" placeholder="2d6"></label>
       <label class="checkbox-label"><input type="checkbox" name="system.equipped" {{checked system.equipped}}> Equipped</label>
@@ -125,6 +122,7 @@
 
     {{#if isSpell}}
       <button type="button" class="wide-field item-cast-spell" data-action="cast-spell-from-item"><i class="fas fa-wand-magic-sparkles"></i> Cast Spell</button>
+      <label class="checkbox-label"><input type="checkbox" name="system.favourite" {{checked system.favourite}}> Favourite</label>
       <label>School <input type="text" name="system.school" value="{{system.school}}"></label>
       <label>Level <input type="number" name="system.level" value="{{system.level}}" min="0"></label>
       <label>MP Cost <input type="number" name="system.mpCost" value="{{system.mpCost}}" min="0"></label>
@@ -141,6 +139,14 @@
     {{#if isEquipment}}
       <label>Quantity <input type="number" name="system.quantity" value="{{system.quantity}}" min="0"></label>
       <label class="checkbox-label"><input type="checkbox" name="system.equipped" {{checked system.equipped}}> Equipped</label>
+      <label class="checkbox-label"><input type="checkbox" name="system.consumable" {{checked system.consumable}}> Consumable</label>
+      <label>Category <input type="text" name="system.category" value="{{system.category}}"></label>
+      <label>Stance <input type="text" name="system.stance" value="{{system.stance}}"></label>
+      <label>Base Price <input type="number" name="system.price" value="{{system.price}}" min="0"></label>
+      <label>Listed Price <input type="text" name="system.priceText" value="{{system.priceText}}"></label>
+      <label>Reputation Required <input type="number" name="system.reputationRequirement" value="{{system.reputationRequirement}}" min="0"></label>
+      <label class="wide-field">Notes <textarea name="system.notes">{{system.notes}}</textarea></label>
+      <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
     {{/if}}
   </section>
 

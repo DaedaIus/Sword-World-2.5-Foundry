@@ -1,9 +1,9 @@
 {
-  "name": "sword-world-2.5-foundry",
-  "version": "0.12.6",
+  "name": "sword-world-25-foundry",
+  "version": "0.14.2",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/check.mjs && node scripts/weapon-damage.test.mjs && node scripts/weapon-import.test.mjs && node scripts/class-feature-import.test.mjs && node scripts/monster-import.test.mjs && node scripts/side-initiative.test.mjs"
+    "check": "node scripts/check.mjs && node scripts/weapon-damage.test.mjs && node scripts/weapon-import.test.mjs && node scripts/class-feature-import.test.mjs && node scripts/monster-import.test.mjs && node scripts/side-initiative.test.mjs && node scripts/equipment-import.test.mjs"
   }
 }

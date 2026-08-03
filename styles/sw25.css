@@ -1,3 +1,4 @@
+/* Sword World 2.5 */
 
 .sw25.sheet.actor {
   min-width: 820px;
@@ -483,7 +484,7 @@
 .class-feature-box > h2 { position:relative; width:100%; box-sizing:border-box; }
 .class-feature-heading-actions { position:absolute; right:4px; top:1px; display:flex; gap:3px; }
 .sw25-official-sheet .class-feature-heading-actions .panel-add { float:none; }
-.class-feature-head,.class-feature-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(70px,.45fr) 70px; width:100%; box-sizing:border-box; align-items:center; border-bottom:1px solid #aaa; }
+.class-feature-head,.class-feature-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(70px,.45fr) 92px; width:100%; box-sizing:border-box; align-items:center; border-bottom:1px solid #aaa; }
 .class-feature-head { font-weight:bold; text-transform:uppercase; background:rgba(70,55,40,.08); }
 .class-feature-head>*,.class-feature-row>* { min-width:0; padding:6px; }
 .class-feature-row .row-delete { width:28px; height:26px; padding:0; }
@@ -492,6 +493,11 @@
 .class-casting-summary { position:relative; padding-top:28px; }
 .class-feature-actions { display:flex; justify-content:flex-end; gap:2px; padding:2px !important; }
 .class-feature-actions button { width:28px; height:26px; padding:0; }
+.class-feature-actions .spell-favourite.active { color:#a87500; }
+.sw25-official-sheet .magic-box { display:flex; flex-direction:column; min-height:0; }
+.sw25-official-sheet .magic-box .magic-list { flex:1 1 auto; min-height:0; overflow-y:auto; }
+.sw25-official-sheet .spell-level-heading { margin:0; padding:3px 6px; border-top:1px solid #777; border-bottom:1px solid #aaa; background:rgba(70,55,40,.1); font-size:10px; text-align:left; text-transform:uppercase; }
+.sw25-official-sheet .class-feature-list { max-height:520px; overflow-y:auto; }
 .sw25-spell-power-result { border-top:1px solid #777; margin-top:6px; padding-top:4px; }
 .class-resource-summary,.alchemist-card-summary { grid-column:1 / -1; padding-top:30px; position:relative; }
 .class-resource-summary { min-height:92px; display:flex; align-items:center; justify-content:center; gap:14px; }
@@ -820,14 +826,20 @@
 
 /* v0.7.0.1 interactive official-sheet controls */
 .sw25-official-sheet .panel-add { float:right; width:22px; height:22px; min-height:0; padding:0; border:1px solid #403b35; border-radius:50%; background:#f5f0e5; color:#292622; }
-.sw25-official-sheet .class-table-head,.sw25-official-sheet .class-row { display:grid; grid-template-columns:1.6fr .42fr .8fr .38fr; gap:3px; align-items:center; }
+.sw25-official-sheet .class-table-head,.sw25-official-sheet .class-row { display:grid; grid-template-columns:1.6fr .42fr .8fr .38fr 24px; gap:3px; align-items:center; }
 .sw25-official-sheet .class-table-head { font-size:9px; font-weight:700; border-bottom:1px solid #4a453f; padding:2px 3px; }
 .sw25-official-sheet .class-row span { font-size:10px; text-align:center; overflow:hidden; text-overflow:ellipsis; }
+.sw25-official-sheet .class-table-head > span:last-child { text-align:center; }
+.sw25-official-sheet .class-delete { width:22px; height:20px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; }
 .sw25-official-sheet .adventurer-orb { margin-left:auto; display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border:3px double #38342e; border-radius:50%; background:#fbf7eb; font-size:18px; }
 .sw25-official-sheet .skill-line select { min-width:0; height:19px; padding:0 2px; font-size:9px; border:0; border-left:1px solid #777; border-right:1px solid #777; background:transparent; }
 .sw25-official-sheet .skill-name-roll { text-align:left; padding:0 2px; border:0; background:transparent; font:inherit; line-height:17px; }
 .sw25-official-sheet .skill-name-roll:hover { font-weight:700; text-decoration:underline; }
-.sw25-official-sheet .inventory-lines > div { display:grid; grid-template-columns:1fr auto auto; gap:5px; align-items:center; }
+.sw25-official-sheet .inventory-lines > div { display:grid; grid-template-columns:minmax(0,1fr) auto auto 50px; gap:5px; align-items:center; }
+.sw25-official-sheet .inventory-lines.consumable-lines > div { grid-template-columns:minmax(0,1fr) 44px 50px; }
+.sw25-official-sheet .inventory-actions { display:flex; align-items:center; justify-content:flex-end; gap:2px; }
+.sw25-official-sheet .inventory-actions button { width:22px; height:20px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; }
+.sw25-official-sheet .inventory-delete { width:22px; height:20px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; }
 .sw25-official-sheet .consumable-lines input { width:44px; height:20px; text-align:center; }
 .sw25-official-sheet .accessory-table > div,.sw25-official-sheet .accessory-table label { display:grid; grid-template-columns:90px 1fr; border-bottom:1px solid #777; min-height:22px; align-items:center; }
 .sw25-official-sheet .accessory-table span,.sw25-official-sheet .accessory-table strong { padding:2px 5px; border-right:1px solid #777; }
@@ -894,7 +906,9 @@
 .def-head,.defense-table>div { grid-template-columns:minmax(110px,1fr) 62px 58px 58px 82px; }
 .weapon-head,.weapon-table>div { grid-template-columns:minmax(100px,1fr) 48px 52px 58px 50px 42px 68px 34px; }
 .weapon-table { overflow-x:auto; }
-.additional-row { display:grid; grid-template-columns:minmax(0,1fr) 22px; align-items:center; border-bottom:1px solid #aaa; }
+.additional-row { display:grid; grid-template-columns:minmax(0,1fr) 50px; align-items:center; border-bottom:1px solid #aaa; }
+.racial-ability-actions { display:flex; align-items:center; justify-content:flex-end; gap:2px; }
+.racial-ability-actions button { width:22px; height:20px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; }
 .row-delete { width:20px; height:20px; margin:0; padding:0; border:0; background:transparent; box-shadow:none; }
 .class-row input { width:42px; text-align:center; }
 
@@ -1376,7 +1390,7 @@
 
 /* v0.7.0.25 feat deletion and racial-abilities-only panel */
 .sw25-official-sheet .feat-row {
-  grid-template-columns: minmax(150px, 1.25fr) minmax(110px, 1fr) minmax(80px, .7fr) 54px;
+  grid-template-columns: minmax(150px, 1.25fr) minmax(110px, 1fr) minmax(80px, .7fr) 80px;
 }
 .sw25-official-sheet .feat-actions {
   display: flex;
@@ -1899,6 +1913,36 @@ form.sw25-official-sheet .offense-selector > label:nth-of-type(2) input {
 .sw25-side-initiative h3,.sw25-side-initiative p { margin:2px 0 5px; }
 .sw25-side-initiative button { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; margin:2px 0 0; }
 .sw25-side-initiative button i { margin:0; }
+.sw25-side-launcher { padding:4px 8px; background:transparent; border:0; }
+.sw25-side-turn-content { padding:10px; text-align:center; }
+.sw25-side-turn-content header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #665b4d; margin-bottom:8px; }
+.sw25-side-turn-content header h2 { margin:0 0 5px; }
+.sw25-side-turn-content.phase-players header { border-color:#2f668a; }
+.sw25-side-turn-content.phase-monsters header { border-color:#8a382f; }
+.sw25-side-turn-content button { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; }
+.sw25-side-progress,.sw25-side-waiting { margin:8px 0; }
+.sw25-gm-turn-controls { margin-top:10px; padding-top:8px; border-top:1px solid #8b8172; }
+.sw25-gm-turn-controls h3 { margin:0 0 5px; }
+.sw25-gm-turn-controls button { margin-top:4px; }
+.sw25-damage-actions { display:flex; gap:4px; margin-top:6px; }
+.sw25-damage-actions button { flex:1 1 0; display:inline-flex; align-items:center; justify-content:center; gap:4px; }
+.sw25-official-sheet .temporary-box { width:54px; border:1px solid #555; border-top:0; background:#eee5d6; font-size:7px; text-transform:uppercase; }
+.sw25-official-sheet .temporary-box span { display:block; text-align:center; }
+.sw25-official-sheet .temporary-box input { width:100%; height:19px; border:0; background:rgba(255,255,255,.45); text-align:center; }
+.sw25-official-sheet .feats-box { min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+.sw25-official-sheet .feats-box > h2 { flex:0 0 auto; }
+.sw25-official-sheet .feats-box .feat-list { flex:1 1 auto; min-height:0; overflow-y:auto; }
+.sw25-official-sheet .languages-box .language-head,
+.sw25-official-sheet .languages-box .language-line { display:grid !important; width:100% !important; max-width:none !important; box-sizing:border-box !important; grid-template-columns:minmax(0,1fr) 38px 38px 24px !important; column-gap:0 !important; padding-left:7px !important; padding-right:7px !important; }
+.sw25-official-sheet .languages-box .language-head > span:nth-child(2),
+.sw25-official-sheet .languages-box .language-head > span:nth-child(3) { width:100%; text-align:center; justify-self:center; }
+.sw25-official-sheet .languages-box .language-line > input[type="checkbox"] { appearance:auto; width:14px; height:14px; min-width:14px; margin:0; padding:0; place-self:center; }
+.sw25-official-sheet .languages-box .language-name-column { grid-column:1 !important; }
+.sw25-official-sheet .languages-box .language-talk-column { grid-column:2 !important; justify-self:center !important; align-self:center !important; }
+.sw25-official-sheet .languages-box .language-read-column { grid-column:3 !important; justify-self:center !important; align-self:center !important; }
+.sw25-official-sheet .languages-box .language-action-column { grid-column:4 !important; justify-self:center !important; align-self:center !important; }
+.sw25-official-sheet .languages-box .language-line > input.language-talk-column,
+.sw25-official-sheet .languages-box .language-line > input.language-read-column { display:block !important; position:static !important; inset:auto !important; transform:none !important; float:none !important; width:14px !important; height:14px !important; min-width:14px !important; max-width:14px !important; margin:0 !important; }
 .sw25-side-active .combatant.active { background:inherit !important; box-shadow:none !important; border-color:inherit !important; }
 .sw25-side-active .combatant.active::before,.sw25-side-active .combatant.active::after { display:none !important; }
 .sw25-side-active .combatant.active .token-initiative,.sw25-side-active .combatant.active .turn-marker { display:none !important; }

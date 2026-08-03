@@ -11,13 +11,14 @@
       <div class="official-page official-page-one">
         <section class="paper-panel class-box">
           <h2>Class <button type="button" class="panel-add" data-action="add-class"><i class="fas fa-plus"></i></button></h2>
-          <div class="class-table-head"><span>Class Name</span><span>Cost</span><span>Type</span><span>Level</span></div>
+          <div class="class-table-head"><span>Class Name</span><span>Cost</span><span>Type</span><span>Level</span><span title="Delete"><i class="fas fa-trash"></i></span></div>
           <div class="paper-list class-paper-list">
             {{#each classes as |item|}}
             <div class="paper-row class-row" data-item-id="{{item.id}}">
               <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
               <span>{{item.system.category}}</span><span>{{item.displayClassType}}</span>
               <input type="number" data-action="edit-class-level" value="{{item.system.level}}" min="0" title="Level">
+              <button type="button" class="row-delete class-delete" data-action="delete-class" title="Delete class"><i class="fas fa-trash"></i></button>
             </div>
             {{else}}<p class="paper-empty">No classes</p>{{/each}}
           </div>
@@ -81,6 +82,7 @@
                 <div class="ability-tower">
                   <label class="adjust-diamond"><span>Adjust</span><input type="number" name="system.abilityAdjustments.{{ability.key}}.correction" value="{{ability.correction}}"></label>
                   <label class="growth-box"><span>Growth</span><input type="number" name="system.abilityAdjustments.{{ability.key}}.growth" value="{{ability.growth}}"></label>
+                  <label class="temporary-box"><span>Temp</span><input type="number" name="system.abilityAdjustments.{{ability.key}}.temporary" value="{{ability.temporary}}"></label>
                   <div class="score-octagon"><span>{{ability.name}}</span><strong>{{ability.score}}</strong></div>
                   <div class="bonus-orb"><span>Bonus</span><strong>{{ability.bonus}}</strong></div>
                 </div>
@@ -94,24 +96,24 @@
         <section class="paper-panel inventory-box">
           <h2>Inventory <button type="button" class="panel-add" data-action="add-inventory"><i class="fas fa-plus"></i></button></h2>
           <h3>Items</h3>
-          <div class="inventory-lines">{{#each inventoryItems as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>{{item.type}}</span><span>×{{item.system.quantity}}</span></div>{{else}}<p class="paper-empty">No items</p>{{/each}}</div>
+          <div class="inventory-lines">{{#each inventoryItems as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>{{item.type}}</span><span>×{{item.system.quantity}}</span><span class="inventory-actions"><button type="button" data-action="post-item" title="Post item to chat"><i class="fas fa-comment"></i></button><button type="button" class="row-delete inventory-delete" data-action="delete-item" title="Delete item"><i class="fas fa-trash"></i></button></span></div>{{else}}<p class="paper-empty">No items</p>{{/each}}</div>
           <h3>Consumables</h3>
-          <div class="inventory-lines consumable-lines">{{#each consumables as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><input type="number" value="{{item.system.quantity}}" disabled></div>{{else}}<p class="paper-empty">No consumables</p>{{/each}}</div>
+          <div class="inventory-lines consumable-lines">{{#each consumables as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><input type="number" value="{{item.system.quantity}}" disabled><span class="inventory-actions"><button type="button" data-action="post-item" title="Post item to chat"><i class="fas fa-comment"></i></button><button type="button" class="row-delete inventory-delete" data-action="delete-item" title="Delete consumable"><i class="fas fa-trash"></i></button></span></div>{{else}}<p class="paper-empty">No consumables</p>{{/each}}</div>
           <h3>Money / Debt</h3>
           <label class="money-line"><span>Gamels <strong>{{system.currency.gamels}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="gamels" placeholder="+/- amount"></label>
           <label class="money-line"><span>Debt <strong>{{system.currency.debt}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="debt" placeholder="+/- amount"></label>
         </section>
 
-        <section class="paper-panel languages-box"><h2>Languages <button type="button" class="panel-add" data-action="add-language"><i class="fas fa-plus"></i></button></h2><div class="language-head"><span></span><span>Talk</span><span>Read</span></div>{{#each languages as |language|}}<div class="language-line"><input type="text" data-action="edit-language" data-index="{{@index}}" data-field="name" value="{{language.name}}"><input type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="talk" {{checked language.talk}}><input type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="read" {{checked language.read}}><button type="button" class="row-delete" data-action="remove-language" data-index="{{@index}}" title="Remove language"><i class="fas fa-times"></i></button></div>{{else}}<p class="paper-empty">No languages</p>{{/each}}</section>
+        <section class="paper-panel languages-box"><h2>Languages <button type="button" class="panel-add" data-action="add-language"><i class="fas fa-plus"></i></button></h2><div class="language-head"><span class="language-name-column"></span><span class="language-talk-column">Talk</span><span class="language-read-column">Read</span><span class="language-action-column"></span></div>{{#each languages as |language|}}<div class="language-line"><input class="language-name-column" type="text" data-action="edit-language" data-index="{{@index}}" data-field="name" value="{{language.name}}"><input class="language-talk-column" type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="talk" {{checked language.talk}}><input class="language-read-column" type="checkbox" data-action="edit-language" data-index="{{@index}}" data-field="read" {{checked language.read}}><button type="button" class="row-delete language-action-column" data-action="remove-language" data-index="{{@index}}" title="Remove language"><i class="fas fa-times"></i></button></div>{{else}}<p class="paper-empty">No languages</p>{{/each}}</section>
       </div>
     </div>
 
     <div class="sheet-tab" data-tab-panel="combat">
       <div class="official-page official-page-two">
         <section class="paper-panel special-box"><h2>Special Combat Modifiers</h2><div class="special-grid">
-<label><span>Sage Level</span><input type="number" name="system.combat.sageLevel" value="{{calculated.sageLevel}}" min="0"></label>
+<label><span>Sage Level</span><input type="number" value="{{calculated.sageLevel}}" min="0" disabled title="Automatically taken from the Sage class level"></label>
 <button type="button" data-action="roll-check" data-check="monsterKnowledge"><span>Monster Knowledge</span><strong>{{calculated.monsterKnowledge}}</strong></button>
-<label><span>Scout Level</span><input type="number" name="system.combat.scoutLevel" value="{{calculated.scoutLevel}}" min="0"></label>
+<label><span>Scout Level</span><input type="number" value="{{calculated.scoutLevel}}" min="0" disabled title="Automatically taken from the Scout class level"></label>
 <button type="button" data-action="roll-check" data-check="initiative"><span>Initiative</span><strong>{{calculated.initiative}}</strong></button>
 </div></section>
         <section class="paper-panel movement-box"><h2>Movement</h2><div class="movement-track"><label>Limited Move<input type="number" value="3" disabled></label><label>Normal Move<input type="number" name="system.combat.movement" value="{{system.combat.movement}}"></label><label>Full Move<input type="number" value="{{calculated.fullMove}}" disabled></label></div><input type="text" name="system.combat.movementEnhancements" value="{{system.combat.movementEnhancements}}" placeholder="Movement enhancements"></section>
@@ -130,7 +132,7 @@
           </div>
           <small>Adventurer Level × 3 + Vitality</small>
         </section>
-        <section class="paper-panel accessories-box"><h2>Accessories</h2><div class="accessory-table"><div><strong>Section</strong><strong>Accessory</strong></div>{{#each accessoryRows as |row|}}<label><span>{{row.label}}</span><input type="text" name="system.accessories.{{row.key}}" value="{{row.value}}"></label>{{/each}}</div></section>
+        <section class="paper-panel accessories-box"><h2>Accessories <button type="button" class="panel-add" data-action="import-accessory" title="Import accessory"><i class="fas fa-file-import"></i></button></h2><div class="accessory-table"><div><strong>Section</strong><strong>Accessory</strong></div>{{#each accessoryRows as |row|}}<label><span>{{row.label}}</span><input type="text" name="system.accessories.{{row.key}}" value="{{row.value}}"></label>{{/each}}</div></section>
         <section class="paper-panel defense-box"><h2>Defensive Combat Stats <button type="button" class="panel-add" data-action="add-armour"><i class="fas fa-plus"></i></button></h2><div class="defense-selector evasion-builder"><label>Defense Class<select data-action="select-defense-class"><option value="">—</option>{{#each defenseClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select></label><span>Class Lv <strong>{{calculated.defenseClassLevel}}</strong></span><span>Agility Bonus <strong>{{calculated.bonuses.agility}}</strong></span><label>Situational Evasion Modifier <input type="number" name="system.combat.situationalEvasion" value="{{calculated.situationalEvasion}}"></label></div><div class="defense-table"><div class="def-head"><span>Armour / Shield</span><span title="Equipped">Eq</span><span title="Minimum Strength">STR</span><span title="Evasion">Eva</span><span title="Defense">Def</span><span title="Magical Defense">M.Def</span><span aria-label="Delete" title="Delete"><i class="fas fa-trash"></i></span></div>{{#each armour as |item|}}<div class="armour-entry" data-item-id="{{item.id}}"><div class="armour-name-cell"><button type="button" class="paper-link" data-action="toggle-armour">{{item.name}}</button>{{#if item.system.notes}}<small>{{item.system.notes}}</small>{{/if}}</div><label class="armour-equipped" title="Only equipped armour applies its modifiers"><input type="checkbox" data-action="toggle-armour-equipped" {{checked item.system.equipped}}><span class="sr-only">Equipped</span></label><span>{{item.system.minStrength}}</span><span>{{item.system.evasion}}</span><span>{{item.system.defence}}</span><span>{{item.system.magicalDefence}}</span><button type="button" class="armour-delete" data-action="delete-armour" title="Delete armour"><i class="fas fa-trash"></i></button></div>{{else}}<p class="paper-empty">No armour</p>{{/each}}</div><div class="defense-totals"><span>Defense <strong>{{calculated.defense}}</strong></span><span>Magical Defense <strong>{{calculated.magicalDefense}}</strong></span></div><div class="resistance-strip"><button type="button" data-action="roll-check" data-check="fortitude">Fortitude <strong>{{calculated.fortitude}}</strong></button><button type="button" data-action="roll-check" data-check="willpower">Willpower <strong>{{calculated.willpower}}</strong></button><button type="button" data-action="roll-check" data-check="evasion">Evasion <strong>{{calculated.evasion}}</strong></button></div></section>
         <section class="paper-panel magic-box"><h2>Spells &amp; Magic</h2>
           <div class="mp-crystal">
@@ -145,7 +147,7 @@
               <div class="resource-max-caption">MAX MP</div>
             </div>
           </div>
-          <div class="page-two-magic-power"><select data-action="select-magic-class" aria-label="Wizard class"><option value="">— Wizard Class —</option>{{#each magicClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select><button type="button" class="magic-power-roll" data-action="roll-check" data-check="magicPower">Magic Power <strong>{{calculated.magicPower}}</strong></button></div><div class="magic-list">{{#each spells as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>Lv {{item.system.level}}</span><span>MP {{item.system.mpCost}}</span><button type="button" data-action="cast-spell">Cast</button></div>{{else}}<p class="paper-empty">No spells</p>{{/each}}</div></section>
+          <div class="page-two-magic-power"><select data-action="select-magic-class" aria-label="Wizard class"><option value="">— Wizard Class —</option>{{#each magicClassChoices as |choice|}}<option value="{{choice.value}}" {{#if choice.selected}}selected{{/if}}>{{choice.label}}</option>{{/each}}</select><button type="button" class="magic-power-roll" data-action="roll-check" data-check="magicPower">Magic Power <strong>{{calculated.magicPower}}</strong></button></div><div class="magic-list">{{#each favouriteSpellLevels as |levelGroup|}}<h3 class="spell-level-heading">{{levelGroup.label}}</h3>{{#each levelGroup.items as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><span>Lv {{item.system.level}}</span><span>MP {{item.system.mpCost}}</span><button type="button" data-action="cast-spell">Cast</button></div>{{/each}}{{else}}<p class="paper-empty">No favourite spells</p>{{/each}}</div></section>
         <section class="paper-panel feats-box">
           <h2>Combat Feats <button type="button" class="panel-add" data-action="add-feat"><i class="fas fa-plus"></i></button></h2>
           <div class="feat-list">
@@ -159,6 +161,7 @@
                   <span class="feat-prerequisite">{{item.system.prerequisite}}</span>
                   <span class="feat-use">{{item.system.use}}</span>
                   <span class="feat-actions">
+                    <button type="button" class="feat-post" data-action="post-item" title="Post feat to chat"><i class="fas fa-comment"></i></button>
                     <button type="button" class="feat-edit" data-action="edit-item" title="Edit feat"><i class="fas fa-pen"></i></button>
                     <button type="button" class="feat-delete" data-action="delete-item" title="Delete feat"><i class="fas fa-trash"></i></button>
                   </span>
@@ -208,7 +211,7 @@
             {{#each racialAbilities as |item|}}
               <div class="additional-row" data-item-id="{{item.id}}">
                 <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
-                <button type="button" class="row-delete" data-action="delete-item" title="Delete racial ability"><i class="fas fa-times"></i></button>
+                <span class="racial-ability-actions"><button type="button" data-action="post-item" title="Post racial ability to chat"><i class="fas fa-comment"></i></button><button type="button" class="row-delete" data-action="delete-item" title="Delete racial ability"><i class="fas fa-times"></i></button></span>
               </div>
             {{else}}
               <p class="paper-empty">No racial abilities</p>
@@ -292,14 +295,28 @@
           <h2>{{section.label}} <span class="class-feature-heading-actions"><button type="button" class="panel-add" data-action="add-class-feature-manually" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" title="Add {{section.label}} manually"><i class="fas fa-plus"></i></button><button type="button" class="panel-add" data-action="import-class-feature" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" data-prefix="{{section.prefix}}" title="Import {{section.label}}"><i class="fas fa-file-import"></i></button></span></h2>
           <div class="class-feature-head"><span>Name</span><span>Requirement</span><span>Cost</span><span>Actions</span></div>
           <div class="class-feature-list">
+            {{#if (eq section.key "spell")}}
+            {{#each section.levelGroups as |levelGroup|}}
+            <h3 class="spell-level-heading">{{levelGroup.label}}</h3>
+            {{#each levelGroup.items as |item|}}
+            <div class="class-feature-row" data-item-id="{{item.id}}">
+              <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+              <span>{{#if item.system.requirement}}{{item.system.requirement}}{{else}}—{{/if}}</span>
+              <span>{{#if item.classFeatureCost}}{{item.classFeatureCost}}{{else}}{{#if item.system.mpCost}}MP {{item.system.mpCost}}{{else}}—{{/if}}{{/if}}</span>
+              <span class="class-feature-actions"><button type="button" class="spell-favourite {{#if item.system.favourite}}active{{/if}}" data-action="toggle-spell-favourite" title="{{#if item.system.favourite}}Remove from favourites{{else}}Add to favourites{{/if}}"><i class="{{#if item.system.favourite}}fas{{else}}far{{/if}} fa-star"></i></button><button type="button" data-action="cast-spell" title="Cast spell"><i class="fas fa-wand-magic-sparkles"></i></button><button type="button" class="row-delete" data-action="delete-item" title="Delete"><i class="fas fa-trash"></i></button></span>
+            </div>
+            {{/each}}
+            {{else}}<p class="paper-empty">No {{section.label}}</p>{{/each}}
+            {{else}}
             {{#each section.items as |item|}}
             <div class="class-feature-row" data-item-id="{{item.id}}">
               <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
               <span>{{#if item.system.requirement}}{{item.system.requirement}}{{else}}—{{/if}}</span>
               <span>{{#if item.classFeatureCost}}{{item.classFeatureCost}}{{else}}{{#if item.system.mpCost}}MP {{item.system.mpCost}}{{else}}—{{/if}}{{/if}}</span>
-              <span class="class-feature-actions">{{#if (eq section.key "spell")}}<button type="button" data-action="cast-spell" title="Cast spell"><i class="fas fa-wand-magic-sparkles"></i></button>{{else}}<button type="button" data-action="post-class-feature" title="Post to chat"><i class="fas fa-comment"></i></button>{{/if}}<button type="button" class="row-delete" data-action="delete-item" title="Delete"><i class="fas fa-trash"></i></button></span>
+              <span class="class-feature-actions">{{#if (eq section.key "spell")}}<button type="button" class="spell-favourite {{#if item.system.favourite}}active{{/if}}" data-action="toggle-spell-favourite" title="{{#if item.system.favourite}}Remove from favourites{{else}}Add to favourites{{/if}}"><i class="{{#if item.system.favourite}}fas{{else}}far{{/if}} fa-star"></i></button><button type="button" data-action="cast-spell" title="Cast spell"><i class="fas fa-wand-magic-sparkles"></i></button>{{else}}<button type="button" data-action="post-class-feature" title="Post to chat"><i class="fas fa-comment"></i></button>{{/if}}<button type="button" class="row-delete" data-action="delete-item" title="Delete"><i class="fas fa-trash"></i></button></span>
             </div>
             {{else}}<p class="paper-empty">No {{section.label}}</p>{{/each}}
+            {{/if}}
           </div>
         </section>
         {{/each}}

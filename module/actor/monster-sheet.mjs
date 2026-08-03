@@ -1,5 +1,6 @@
 import { lootMatches, monsterDamageFormula } from "../importer/monster-parser.mjs";
 import { beginMonsterInitiative } from "../combat/side-initiative.mjs";
+import { damageApplicationButton } from "../combat/damage-application.mjs";
 
 export class SW25MonsterSheet extends ActorSheet {
   static get defaultOptions() {
@@ -13,6 +14,26 @@ export class SW25MonsterSheet extends ActorSheet {
   }
 
   get template() { return "systems/sword-world-25/templates/actor/monster-sheet.hbs"; }
+
+  _getSubmitData(updateData = {}) {
+    const data = super._getSubmitData(updateData);
+    // Foundry V14 does not safely rebuild arrays from dotted form paths such as
+    // system.combatStyles.0.damage. Reassemble each editable collection before
+    // updating the Actor so editing one field cannot replace the array with an
+    // object (which made every combat-stat row disappear on the next render).
+    for (const collection of ["combatStyles", "uniqueSkills", "lootTable"]) {
+      const prefix = `system.${collection}.`;
+      const fields = Object.entries(data).filter(([key]) => key.startsWith(prefix));
+      if (!fields.length) continue;
+      const list = foundry.utils.deepClone(Array.isArray(this.actor.system[collection]) ? this.actor.system[collection] : []);
+      for (const [key, value] of fields) {
+        foundry.utils.setProperty(list, key.slice(prefix.length), value);
+        delete data[key];
+      }
+      data[`system.${collection}`] = list;
+    }
+    return data;
+  }
 
   async getData(options = {}) {
     const context = await super.getData(options);
@@ -49,7 +70,7 @@ export class SW25MonsterSheet extends ActorSheet {
       if (!style) return;
       try {
         const roll = await new Roll(monsterDamageFormula(style.damage)).evaluate();
-        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${this.actor.name} — ${style.style || "Attack"} Damage` });
+        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `<div>${foundry.utils.escapeHTML(this.actor.name)} — ${foundry.utils.escapeHTML(style.style || "Attack")} Damage${damageApplicationButton(roll.total, "physical")}</div>` });
       } catch (error) { ui.notifications.error(`Invalid monster damage formula: ${style.damage}`); }
     });
 

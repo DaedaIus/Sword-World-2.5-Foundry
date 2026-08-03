@@ -1,6 +1,7 @@
 const WARRIOR_CLASS_NAMES = new Set([
   "battle dancer", "fencer", "fighter", "grappler",
-  "marksman", "martial artist",
+  "marksman", "martial artist", "shooter",
+  "ファイター", "グラップラー", "フェンサー", "シューター"
 ]);
 
 const normalize = value => String(value ?? "").trim().toLowerCase();
@@ -23,12 +24,12 @@ export function isGunWeapon(weapon) {
 }
 
 export function abilityBonus(system, ability) {
-  const map = { strength: ["body", "c"], intelligence: ["mind", "e"] };
+  const map = { dexterity:["skill", "a"], agility:["skill", "b"], strength:["body", "c"], vitality:["body", "d"], intelligence:["mind", "e"], spirit:["mind", "f"] };
   const [baseKey, adjustmentKey] = map[normalize(ability)] ?? [];
   if (!baseKey) return 0;
   const base = Number(system?.abilityBases?.[baseKey] ?? 0);
   const adjustment = system?.abilityAdjustments?.[adjustmentKey] ?? {};
-  const score = base + Number(adjustment.growth ?? 0) + Number(adjustment.correction ?? 0);
+  const score = base + Number(adjustment.growth ?? 0) + Number(adjustment.correction ?? 0) + Number(adjustment.temporary ?? 0);
   return Math.floor(score / 6);
 }
 

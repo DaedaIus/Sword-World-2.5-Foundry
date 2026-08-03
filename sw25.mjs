@@ -5,11 +5,14 @@ import { SW25Importer } from "./module/importer/sw25-importer.mjs";
 import { resolveAttackingClass, rollWeaponDamage } from "./module/rules/weapon-roll.mjs";
 import { abilityBonus } from "./module/rules/weapon-damage.mjs";
 import { initializeSideInitiative } from "./module/combat/side-initiative.mjs";
+import { damageApplicationButton, initializeDamageApplication } from "./module/combat/damage-application.mjs";
 
 Hooks.once("init", () => {
   game.sw25 = { importer: SW25Importer };
   console.log("Sword World 2.5 | Initializing");
 
+  // Keep the system stylesheet after Foundry's core theme styles. Foundry V14
+  // otherwise allows core form/button rules to win depending on load order.
   const stylesheetPath = "systems/sword-world-25/styles/sw25.css";
   const existingStylesheet = document.querySelector(`link[data-sw25-stylesheet]`);
   if (!existingStylesheet) {
@@ -46,6 +49,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", initializeSideInitiative);
+Hooks.once("ready", initializeDamageApplication);
 
 Hooks.on("renderChatMessage", (message, html) => {
   html.find("[data-sw25-chat-action='roll-spell-damage']").on("click", async event => {
@@ -65,7 +69,7 @@ Hooks.on("renderChatMessage", (message, html) => {
     const critical = Number(spell.system.critical ?? 0);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor }),
-      content: `<div class="sw25-chat-card sw25-spell-power-result"><h3>${foundry.utils.escapeHTML(spell.name)} Damage</h3><p><strong>Power roll:</strong> ${diceTotal} → ${tableValue}</p><p><strong>Magic Power:</strong> ${magicPower}</p><p class="sw25-weapon-total"><strong>Total:</strong> ${total}</p>${critical && diceTotal >= critical ? '<p class="sw25-critical">CRITICAL</p>' : ""}</div>`
+      content: `<div class="sw25-chat-card sw25-spell-power-result"><h3>${foundry.utils.escapeHTML(spell.name)} Damage</h3><p><strong>Power roll:</strong> ${diceTotal} → ${tableValue}</p><p><strong>Magic Power:</strong> ${magicPower}</p><p class="sw25-weapon-total"><strong>Total:</strong> ${total}</p>${damageApplicationButton(total, "magical")}${critical && diceTotal >= critical ? '<p class="sw25-critical">CRITICAL</p>' : ""}</div>`
     });
   });
 
@@ -110,7 +114,7 @@ Hooks.on("renderChatMessage", (message, html) => {
         flavor: `${weapon.name} Damage — Power ${Number(weapon.system.power ?? 0)}, Critical ${Number(weapon.system.critical ?? 10)}`
       });
     } catch (error) {
-      console.error("Invalid weapon damage formula", error);
+      console.error("Sword World 2.5 | Invalid weapon damage formula", error);
       ui.notifications.error(`Invalid damage formula: ${formula}`);
     }
   });

@@ -1,4 +1,5 @@
 import { isGunWeapon, isWarriorClass, weaponDamageParts } from "./weapon-damage.mjs";
+import { damageApplicationButton } from "../combat/damage-application.mjs";
 
 export function resolveAttackingClass(actor, weapon, requestedClassId = "") {
   if (isGunWeapon(weapon)) {
@@ -49,6 +50,7 @@ export async function rollWeaponDamage({ actor, weapon, attackingClass, accumula
         <p><strong>Weapon additional damage:</strong> ${damage.additionalDamage >= 0 ? "+" : ""}${damage.additionalDamage}</p>
         <p><strong>Additional damage:</strong> ${situationalDamage >= 0 ? "+" : ""}${situationalDamage}</p>
         <p class="sw25-weapon-total"><strong>Total damage: ${total}</strong></p>
+        ${damageApplicationButton(total, "physical")}
         ${criticalControl}
       </div>`
   });

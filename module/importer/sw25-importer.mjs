@@ -1,4 +1,5 @@
 import { parseMonsterPage } from "./monster-parser.mjs";
+import { parseEquipmentTables } from "./equipment-parser.mjs";
 
 export class SW25Importer {
   static async open(actor = null) {
@@ -387,7 +388,93 @@ export class SW25Importer {
       return this.chooseArmourTable(tables, actor, url);
     }
 
+    const equipmentPages = {
+      "items:general-equipment":{},
+      "items:adventure-tools-consumable":{ defaultCategory:"Adventure Tools (Consumable)", consumable:true },
+      "items:accessories":{}
+    };
+    if (slug in equipmentPages) {
+      if (!actor) throw new Error("Equipment tables must be imported onto a character.");
+      const tables = parseEquipmentTables(fetched.text, url, equipmentPages[slug]);
+      if (!tables.length) throw new Error("No equipment tables could be read from this page.");
+      const selected = await this.selectEquipment(tables);
+      if (!selected) return null;
+      return this.createEquipment(selected, actor);
+    }
+
     throw new Error("This page type is not supported yet.");
+  }
+
+  static async selectEquipment(tables = []) {
+    const categoryOptions = tables.map((table, index) => `<option value="${index}">${foundry.utils.escapeHTML(table.name)} (${table.items.length})</option>`).join("");
+    const categoryIndex = await new Promise(resolve => new Dialog({
+      title:"Choose Equipment Category",
+      content:`<form><div class="form-group"><label>Category</label><select name="category">${categoryOptions}</select></div></form>`,
+      buttons:{ next:{label:"Next",callback:html=>resolve(Number(html.find('[name="category"]').val()))}, cancel:{label:"Cancel",callback:()=>resolve(null)} },
+      default:"next", close:()=>resolve(null)
+    }).render(true));
+    if (categoryIndex === null) return null;
+    const table = tables[categoryIndex];
+    const itemOptions = table.items.map((item, index) => `<option value="${index}">${foundry.utils.escapeHTML(`${item.name} — ${item.priceText}G${item.stance && item.stance !== "-" ? `, ${item.stance}` : ""}`)}</option>`).join("");
+    const itemIndex = await new Promise(resolve => new Dialog({
+      title:table.name,
+      content:`<form><div class="form-group"><label>Equipment</label><select name="item">${itemOptions}</select></div></form>`,
+      buttons:{ import:{label:"Import",callback:html=>resolve(Number(html.find('[name="item"]').val()))}, cancel:{label:"Cancel",callback:()=>resolve(null)} },
+      default:"import", close:()=>resolve(null)
+    }).render(true));
+    return itemIndex === null ? null : table.items[itemIndex];
+  }
+
+  static async createEquipment(equipment, actor) {
+    const documents = this.equipmentDocuments(equipment);
+    const created = await actor.createEmbeddedDocuments("Item", documents);
+    if (created.length === 1) return created[0];
+    return { name:`${equipment.name} (${created.length} items)`, items:created };
+  }
+
+  static equipmentDocuments(equipment = {}) {
+    const baseSystem = {
+      quantity:1,
+      equipped:false,
+      consumable:Boolean(equipment.consumable),
+      category:equipment.category,
+      stance:equipment.stance,
+      price:equipment.price,
+      priceText:equipment.priceText,
+      reputationRequirement:equipment.reputationRequirement,
+      notes:equipment.notes,
+      description:equipment.notes,
+      sourceUrl:equipment.sourceUrl
+    };
+    if (String(equipment.name || "").trim().toLowerCase() !== "adventurer set") {
+      return [{ name:equipment.name, type:"equipment", system:baseSystem }];
+    }
+
+    const parts = [
+      { name:"Backpack" },
+      { name:"Waterskin" },
+      { name:"Blanket" },
+      { name:"Torches", quantity:6, consumable:true },
+      { name:"Tinderbox" },
+      { name:"10m Rope" },
+      { name:"Small Knife" }
+    ];
+    return parts.map(part => ({
+      name:part.name,
+      type:"equipment",
+      system:{
+        ...baseSystem,
+        quantity:part.quantity ?? 1,
+        consumable:Boolean(part.consumable),
+        category:"Adventurer Set",
+        stance:"-",
+        price:0,
+        priceText:"Part of Adventurer Set",
+        reputationRequirement:0,
+        notes:"Part of Adventurer Set",
+        description:"Part of Adventurer Set"
+      }
+    }));
   }
 
 
@@ -1181,15 +1268,29 @@ export class SW25Importer {
   static featDescription(text = "") {
     const source = String(text ?? "")
       .replace(/\r/g, "")
+      .replace(/^.*system:page-tags\/tag\/.*$/gmi, "Page Tags")
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(?:p|div|h[1-6]|li|tr)>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
       .replace(/^Title:\s*.*$/gmi, "")
       .replace(/^URL Source:\s*.*$/gmi, "")
       .replace(/^Markdown Content:\s*$/gmi, "")
-      .replace(/^#{1,6}\s+.*$/gm, "")
-      .replace(/^\s*(?:\*\*)?(?:Prerequisite|Use|Summary)\s*:\s*(?:\*\*)?.*$/gmi, "")
-      .replace(/^\s*(?:Home|Create a Page).*$/gmi, "");
-    return this.clean(source);
+      .replace(/[`*_~]/g, "");
+    const lines = source.split("\n").map(line => line.trim());
+    const fieldPattern = /^(?:Prerequisite|Use|Application|Risk|Summary|Type)\s*:/i;
+    const fieldIndexes = lines.map((line, index) => fieldPattern.test(line) ? index : -1).filter(index => index >= 0);
+    const start = fieldIndexes.length ? Math.max(...fieldIndexes) + 1 : 0;
+    const description = [];
+    for (const line of lines.slice(start)) {
+      if (/^(?:Source|Page Tags|Site Navigation|Create a Page|Powered by|Unless otherwise stated)\s*:?/i.test(line)) break;
+      if (/^Help\s*\|\s*Terms of Service\s*\|\s*Privacy\s*\|/i.test(line)) break;
+      if (/^(?:feat|vfeat)(?:feat|[-\w])+$/i.test(line) && !/\s/.test(line)) break;
+      if (/^#{1,6}\s+/.test(line) || /^-{3,}$/.test(line)) continue;
+      description.push(line);
+    }
+    return this.clean(description.join("\n"));
   }
 
   static parseFeatMarkdown(markdown = "", url = "") {
@@ -1351,7 +1452,7 @@ export class SW25Importer {
 
     const rankFromLine = value => {
       const match = cleanLine(value).match(
-        /(?:^|\b)(SS|S|A|B)\s*(?:-|‐|–|—)?\s*Rank\s+(?:Swords?|Axes?|Weapons?)/i
+        /(?:^|\b)(SS|S|A|B)\s*(?:-|‐|–|—)?\s*Rank\s+(?:Swords?|Axes?|Staves|Weapons?)/i
       );
       if (match) return match[1].toUpperCase();
       const gunMatch = cleanLine(value).match(/(?:^|\b)(SS|S|A|B)\s*[- ]?\s*Rank\s+Guns?/i);
@@ -1584,12 +1685,12 @@ export class SW25Importer {
     if (rankIndex === null) return [];
 
     const rank = ranks[rankIndex];
-    const weapons = grouped.get(rank).sort((a, b) =>
-      a.name.localeCompare(b.name) || String(a.stance).localeCompare(String(b.stance))
-    );
-    const weaponOptions = weapons.map((weapon, index) => {
-      const stance = weapon.stance ? ` (${weapon.stance})` : "";
-      const label = `${weapon.name}${stance} — Min STR ${weapon.minStrength}, Accuracy ${weapon.accuracy}, Power ${weapon.power}, Critical ${weapon.critical}`;
+    const weaponGroups = this.groupWeaponStances(grouped.get(rank));
+    const weaponOptions = weaponGroups.map((stances, index) => {
+      const weapon = stances[0];
+      const stanceList = stances.map(entry => entry.stance).filter(Boolean).join(" / ");
+      const stance = stanceList ? ` (${stanceList})` : "";
+      const label = `${weapon.name}${stance} — ${stances.length > 1 ? `${stances.length} stances` : `Min STR ${weapon.minStrength}, Accuracy ${weapon.accuracy}, Power ${weapon.power}, Critical ${weapon.critical}`}`;
       return `<option value="${index}">${foundry.utils.escapeHTML(label)}</option>`;
     }).join("");
     const weaponIndex = await new Promise(resolve => new Dialog({
@@ -1603,16 +1704,34 @@ export class SW25Importer {
       close: () => resolve(null)
     }).render(true));
 
-    return weaponIndex === null ? [] : [weapons[weaponIndex]].filter(Boolean);
+    return weaponIndex === null ? [] : (weaponGroups[weaponIndex] || []);
+  }
+
+  static groupWeaponStances(weapons = []) {
+    const groups = new Map();
+    for (const weapon of weapons) {
+      const key = `${weapon.rank || ""}|${weapon.name}`.toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(weapon);
+    }
+    return [...groups.values()]
+      .map(stances => stances.sort((a, b) => String(a.stance).localeCompare(String(b.stance))))
+      .sort((a, b) => a[0].name.localeCompare(b[0].name));
   }
 
   static async createWeapons(parsed = [], actor = null) {
-    const docs = parsed.map(weapon => ({
+    const primaryKeys = new Set();
+    const docs = parsed.map(weapon => {
+      const groupKey = `${weapon.rank || ""}|${weapon.name}`.toLowerCase();
+      const inventoryPrimary = !primaryKeys.has(groupKey);
+      primaryKeys.add(groupKey);
+      return ({
       name: weapon.name,
       type: "weapon",
       system: {
         category: weapon.category || "",
         rank: weapon.rank || "",
+        inventoryPrimary,
         stance: weapon.stance || "",
         usage: weapon.usage || weapon.stance || "",
         minStrength: Number(weapon.minStrength) || 0,
@@ -1629,7 +1748,8 @@ export class SW25Importer {
         powerTable: weapon.powerTable || {},
         sourceUrl: weapon.sourceUrl || ""
       }
-    }));
+    });
+    });
 
     if (!docs.length) {
       const captured = String(globalThis.SW25_LAST_WEAPON_SOURCE ?? "");
@@ -1644,11 +1764,11 @@ export class SW25Importer {
       const existing = new Map(
         actor.items
           .filter(item => item.type === "weapon")
-          .map(item => [`${item.system.rank}|${item.name}`.toLowerCase(), item])
+          .map(item => [`${item.system.rank}|${item.name}|${item.system.stance || item.system.usage || ""}`.toLowerCase(), item])
       );
       const create = [];
       for (const doc of docs) {
-        const key = `${doc.system.rank}|${doc.name}`.toLowerCase();
+        const key = `${doc.system.rank}|${doc.name}|${doc.system.stance || doc.system.usage || ""}`.toLowerCase();
         const old = existing.get(key);
         if (old) {
           await old.update({
@@ -1711,7 +1831,7 @@ export class SW25Importer {
           const match = line.match(pattern);
           if (!match) continue;
           const formula = this.normalizeFormula(match[1]);
-          if (formula) result[letter.toLowerCase()] = formula;
+          if (formula && !result[letter.toLowerCase()]) result[letter.toLowerCase()] = formula;
         }
       }
     }
@@ -1980,7 +2100,18 @@ export class SW25Importer {
   static parseBackgroundTablesMarkdown(md, raceName = "") {
     const lines = String(md).split("\n");
     const start = lines.findIndex(line => /background tables?/i.test(line));
-    if (start < 0) return [];
+    if (start < 0) {
+      const fixedHeader = lines.findIndex(line => {
+        const cleaned = this.clean(line).toLowerCase();
+        return /background/.test(cleaned) && /starting classes?/.test(cleaned) && /skill\s*\/\s*body\s*\/\s*mind/.test(cleaned) && /experience/.test(cleaned);
+      });
+      if (fixedHeader < 0) return [];
+      for (const line of lines.slice(fixedHeader + 1)) {
+        const entry = this.parseFixedBackgroundRow(line);
+        if (entry) return [{ name:"Background", fixed:true, entries:[entry] }];
+      }
+      return [];
+    }
 
     const tables = [];
     let currentTitle = "";
@@ -2098,6 +2229,41 @@ export class SW25Importer {
     };
   }
 
+  static parseFixedBackgroundRow(line = "") {
+    const cleaned = this.clean(line);
+    const match = cleaned.match(/^(.+?)\s+(\d+\s*\/\s*\d+\s*\/\s*\d+)\s+([\d,]+)(?:\s*XP)?$/i);
+    if (!match) return null;
+    const stats = this.parseStatTriplet(match[2]);
+    if (!stats) return null;
+
+    const middle = this.clean(match[1]);
+    const knownClasses = [
+      "Fairy Tamer", "Martial Artist", "Dark Hunter", "Battle Dancer",
+      "Daemonologist", "Bibliomancer", "Artificer", "Conjurer", "Druid",
+      "Fencer", "Fighter", "Grappler", "Marksman", "Priest", "Sorcerer",
+      "Scout", "Ranger", "Sage", "Enhancer", "Bard", "Rider", "Alchemist",
+      "Geomancer", "Tactician", "Heritor", "Shooter"
+    ];
+    const className = `(?:${knownClasses.join("|")})`;
+    const classMatch = middle.match(new RegExp(`(${className}(?:\\s*(?:,|&|and|\\+)\\s*${className})*)$`, "i"));
+    if (!classMatch) return null;
+    const backgroundName = this.clean(middle.slice(0, classMatch.index));
+    const startingClassesText = this.clean(classMatch[1]);
+    if (!backgroundName) return null;
+
+    return {
+      roll:null,
+      fixed:true,
+      name:backgroundName,
+      startingClasses:this.parseStartingClasses(startingClassesText),
+      startingClassesText,
+      skill:stats.skill,
+      body:stats.body,
+      mind:stats.mind,
+      experience:this.parseExperience(match[3])
+    };
+  }
+
   static async promptBackground(actor, raceName, tables = []) {
     if (!actor || !tables.length) {
       ui.notifications.warn(`No background tables were found for ${raceName}.`);
@@ -2122,11 +2288,12 @@ export class SW25Importer {
     if (tableIndex === null || tableIndex === undefined) return null;
 
     const table = tables[tableIndex];
+    const fixed = Boolean(table.fixed || (table.entries.length === 1 && !table.entries[0].roll));
     return new Promise(resolve => {
       const rows = table.entries.map((entry, index) => `
         <label class="sw25-background-choice" data-index="${index}">
-          <input type="radio" name="background-entry" value="${index}">
-          <span>${foundry.utils.escapeHTML(entry.roll.label)}</span>
+          <input type="radio" name="background-entry" value="${index}" ${fixed && index === 0 ? "checked" : ""}>
+          <span>${foundry.utils.escapeHTML(entry.roll?.label || "Fixed")}</span>
           <strong>${foundry.utils.escapeHTML(entry.name)}</strong>
           <span>${foundry.utils.escapeHTML(entry.startingClassesText || "—")}</span>
           <span>${entry.skill}/${entry.body}/${entry.mind}</span>
@@ -2137,10 +2304,10 @@ export class SW25Importer {
         title: `${raceName}: ${table.name}`,
         content: `
           <div class="sw25-background-prompt">
-            <p>Choose a background directly, or roll 2d6 and use the matching row.</p>
-            <div class="sw25-background-heading"><span>2d</span><span>Background</span><span>Starting Classes</span><span>Skill/Body/Mind</span><span>Experience</span></div>
+            <p>${fixed ? "This race has one fixed background." : "Choose a background directly, or roll 2d6 and use the matching row."}</p>
+            <div class="sw25-background-heading"><span>${fixed ? "Type" : "2d"}</span><span>Background</span><span>Starting Classes</span><span>Skill/Body/Mind</span><span>Experience</span></div>
             ${rows}
-            <div class="sw25-background-roll-result"><button type="button" class="roll-background"><i class="fas fa-dice"></i> Roll 2d6</button><strong class="rolled-background-result"></strong></div>
+            ${fixed ? "" : '<div class="sw25-background-roll-result"><button type="button" class="roll-background"><i class="fas fa-dice"></i> Roll 2d6</button><strong class="rolled-background-result"></strong></div>'}
           </div>`,
         buttons: {
           apply: {
@@ -2330,6 +2497,54 @@ export class SW25Importer {
     });
   }
 
+  static magitechAngelGearDocuments(sourceUrl = "http://sw25.wikidot.com/race:magitech-angel") {
+    const powerTable = values => Object.fromEntries(values.map((value, index) => [String(index + 3), value]));
+    const racialGearRace = "Magitech Angel";
+    const weapon = (stance, accuracy, power, values, inventoryPrimary) => ({
+      name:"Magitech Angel Spear",
+      type:"weapon",
+      system:{
+        equipped:false, quantity:1, category:"spears", rank:"B", stance, usage:stance,
+        minStrength:15, accuracy, power, critical:10, criticalModifier:0,
+        additionalDamage:1, damageFormula:"2d6", inventoryPrimary,
+        powerTable:powerTable(values), notes:"Cannot be traded. Exclusive to Magitech Angels.",
+        sourceUrl, racialGearRace
+      }
+    });
+    const angelSphereDescription = `A special Magisphere that contains a single Magitech Angel in a dormant state. The Magitech Angel itself can use this item as a [Magisphere (Small)](http://sw25.wikidot.com/items:class-specific) to cast [Magitech](http://sw25.wikidot.com/spells:magitech).
+
+When someone else touches an Angel Sphere in an uncontracted state, the dormant Magitech Angel manifests. The manifested Magitech Angel seeks to form a contract with those nearby (with priority given to the person who touched it). Those who form a contract with this Magitech Angel become a Contractor.
+
+Contractors gain the ability to release the Magitech Angel from its dormant state, making it manifest from the Angel Sphere on command. A Magitech Angel can have up to 6 contractors. However, a Magitech Angel that has already formed contracts cannot form new contracts with others unless all current Contractors agree. Contractors cannot voluntarily terminate their contracts.`;
+    return [
+      weapon("1H†", 0, 20, [1,2,3,4,5,6,7,8,9,10], true),
+      weapon("2H", 1, 25, [2,3,4,5,6,7,8,8,9,10], false),
+      { name:"Magitech Angel Armour", type:"armour", system:{ equipped:false, minStrength:15, evasion:0, defence:5, magicalDefence:0, quantity:1, notes:"Cannot be traded. Metal armour exclusive to Magitech Angels.", sourceUrl, racialGearRace } },
+      { name:"Magitech Angel Shield", type:"armour", system:{ equipped:false, minStrength:15, evasion:0, defence:1, magicalDefence:0, quantity:1, notes:"Cannot be traded. Shield exclusive to Magitech Angels.", sourceUrl, racialGearRace } },
+      { name:"Angel Sphere", type:"equipment", system:{ quantity:1, equipped:false, consumable:false, category:"Adventure Tools", stance:"-", price:0, priceText:"Cannot be Traded", reputationRequirement:0, notes:"Contains a single Magitech Angel.", description:angelSphereDescription, sourceUrl, racialGearRace } }
+    ];
+  }
+
+  static async syncRacialGear(actor, raceName, sourceUrl) {
+    if (!actor || String(raceName || "").trim().toLowerCase() !== "magitech angel") return [];
+    const documents = this.magitechAngelGearDocuments(sourceUrl);
+    const keyFor = document => `${document.type}|${document.name}|${document.system.stance || ""}`.toLowerCase();
+    const existing = new Map(actor.items
+      .filter(item => String(item.system.racialGearRace || "").toLowerCase() === "magitech angel")
+      .map(item => [keyFor(item), item]));
+    const create = [];
+    const result = [];
+    for (const document of documents) {
+      const old = existing.get(keyFor(document));
+      if (old) {
+        await old.update({ name:document.name, ...Object.fromEntries(Object.entries(document.system).map(([field, value]) => [`system.${field}`, value])) });
+        result.push(old);
+      } else create.push(document);
+    }
+    if (create.length) result.push(...await actor.createEmbeddedDocuments("Item", create));
+    return result;
+  }
+
   static async createRace(parsed, actor) {
     const raceData = {
       name: parsed.name || "Imported Race",
@@ -2400,6 +2615,8 @@ export class SW25Importer {
       if (Number(parsed.soulscars) > 0) {
         await actor.update({ "system.soulscars": Number(parsed.soulscars) });
       }
+
+      await this.syncRacialGear(actor, parsed.name, parsed.sourceUrl);
 
       actor.sheet?.render(false);
       await this.promptCorrectionRolls(actor, parsed.name, parsed.corrections);

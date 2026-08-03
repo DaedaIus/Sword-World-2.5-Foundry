@@ -22,27 +22,33 @@
       "abilityAdjustments": {
         "a": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         },
         "b": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         },
         "c": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         },
         "d": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         },
         "e": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         },
         "f": {
           "growth": 0,
-          "correction": 0
+          "correction": 0,
+          "temporary": 0
         }
       },
       "combat": {
@@ -60,9 +66,7 @@
         "movementEnhancements": "",
         "defenseClassId": "",
         "offenseClassId": "",
-        "magicClassId": "",
-        "sageLevel": 0,
-        "scoutLevel": 0
+        "magicClassId": ""
       },
       "xp": {
         "total": 0
@@ -200,6 +204,7 @@
       "accuracyMod": 0,
       "power": 0,
       "critical": 10,
+      "criticalModifier": 0,
       "description": "",
       "damageFormula": "2d6",
       "quantity": 1,
@@ -211,6 +216,8 @@
       "stance": "",
       "category": "",
       "rank": "",
+      "inventoryPrimary": true,
+      "racialGearRace": "",
       "notes": "",
       "selectedClassId": "",
       "artificerPowered": false,
@@ -238,12 +245,15 @@
       "quantity": 1,
       "minStrength": 0,
       "notes": ""
+      ,"sourceUrl": ""
+      ,"racialGearRace": ""
     },
     "skill": {
       "level": 1,
       "description": ""
     },
     "spell": {
+      "favourite": false,
       "school": "",
       "level": 1,
       "mpCost": 0,
@@ -276,7 +286,15 @@
       "quantity": 1,
       "equipped": false,
       "description": "",
-      "consumable": false
+      "consumable": false,
+      "category": "",
+      "stance": "",
+      "price": 0,
+      "priceText": "",
+      "reputationRequirement": 0,
+      "notes": "",
+      "sourceUrl": ""
+      ,"racialGearRace": ""
     },
     "race": {
       "sourceUrl": "",

@@ -1,0 +1,15 @@
+<section class="sw25-side-turn-content phase-{{phase}}">
+  {{#if active}}
+    <header><h2>{{#if playerPhase}}Player Turn{{else}}Monster Turn{{/if}}</h2><span>Round {{round}}</span></header>
+    {{#if playerPhase}}
+      <p class="sw25-side-progress"><strong>{{done}} / {{total}}</strong> players finished</p>
+      {{#if canEndPlayer}}<button type="button" data-action="end-player-turn"><i class="fas fa-check"></i> End My Turn</button>{{else}}<p class="sw25-side-waiting">Waiting for the remaining players.</p>{{/if}}
+      {{#if gmPlayerControls}}<div class="sw25-gm-turn-controls"><h3>GM Controls</h3>{{#each remainingPlayers as |player|}}<button type="button" data-action="gm-end-player-turn" data-combatant-id="{{player.id}}"><i class="fas fa-user-check"></i> End {{player.name}}'s Turn</button>{{/each}}{{#if remainingPlayers.length}}<button type="button" data-action="gm-end-all-player-turns"><i class="fas fa-users"></i> End All Player Turns</button>{{/if}}</div>{{/if}}
+    {{else}}
+      <p class="sw25-side-progress">The monsters are acting.</p>
+      {{#if canEndMonsters}}<button type="button" data-action="end-monster-turn"><i class="fas fa-forward"></i> End Monster Turn</button>{{else}}<p class="sw25-side-waiting">Waiting for the GM.</p>{{/if}}
+    {{/if}}
+  {{else}}
+    <p>Side initiative has not started.</p>
+  {{/if}}
+</section>

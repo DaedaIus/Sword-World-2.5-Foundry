@@ -44,6 +44,19 @@ export class SW25ActorSheet extends ActorSheet {
     context.armour = byType("armour");
     context.skills = byType("skill");
     context.spells = byType("spell");
+    context.favouriteSpells = context.spells.filter(item => Boolean(item.system.favourite));
+    const groupSpellsByLevel = spells => {
+      const levels = new Map();
+      for (const spell of spells) {
+        const level = Math.max(0, Number(spell.system.level ?? 0));
+        if (!levels.has(level)) levels.set(level, []);
+        levels.get(level).push(spell);
+      }
+      return [...levels.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([level, items]) => ({ level, label:`Level ${level}`, items }));
+    };
+    context.favouriteSpellLevels = groupSpellsByLevel(context.favouriteSpells);
     context.equipment = byType("equipment");
     context.additionalItems = [...context.classAbilities, ...context.spells, ...context.feats];
     context.equippedGear = [...context.weapons, ...context.armour, ...context.equipment]
@@ -67,7 +80,8 @@ export class SW25ActorSheet extends ActorSheet {
     const score = (baseName, letter) =>
       Number(base[baseName] ?? 0) +
       Number(adj[letter]?.growth ?? 0) +
-      Number(adj[letter]?.correction ?? 0);
+      Number(adj[letter]?.correction ?? 0) +
+      Number(adj[letter]?.temporary ?? 0);
 
     const xpCosts = {
       A: [0, 1000, 2000, 3500, 5000, 7000, 9500, 12500, 16500, 21500, 27500, 35000, 44000, 54500, 66500, 80000, 95000, 125000],
@@ -120,6 +134,11 @@ export class SW25ActorSheet extends ActorSheet {
         }))
       }];
     });
+    for (const tab of context.classTabs) {
+      for (const section of tab.sections) {
+        if (section.key === "spell") section.levelGroups = groupSpellsByLevel(section.items);
+      }
+    }
 
     const spentXP = context.classes.reduce((total, item) => total + Number(item.xpCost ?? 0), 0);
     const totalXP = Number(system.xp?.total ?? 0);
@@ -179,8 +198,8 @@ export class SW25ActorSheet extends ActorSheet {
     context.calculated.mpMax = context.classes
       .filter(item => /wizard/i.test(String(item.system.classType ?? "")))
       .reduce((sum, item) => sum + Number(item.system.level ?? 0) * 3, 0) + abilities.spirit;
-    context.calculated.sageLevel = Number(system.combat?.sageLevel ?? context.classLevels.sage);
-    context.calculated.scoutLevel = Number(system.combat?.scoutLevel ?? context.classLevels.scout);
+    context.calculated.sageLevel = context.classLevels.sage;
+    context.calculated.scoutLevel = context.classLevels.scout;
     context.calculated.monsterKnowledge = context.calculated.sageLevel + bonuses.intelligence;
     context.calculated.initiative = context.calculated.scoutLevel + bonuses.agility;
     context.calculated.fortitude = adventurer + bonuses.vitality;
@@ -230,16 +249,16 @@ export class SW25ActorSheet extends ActorSheet {
 
     context.officialAbilities = [
       { group: "Skill", baseKey: "skill", base: Number(base.skill ?? 0), abilities: [
-        { key: "a", name: "Dexterity", score: abilities.dexterity, bonus: bonuses.dexterity, growth: Number(adj.a?.growth ?? 0), correction: Number(adj.a?.correction ?? 0) },
-        { key: "b", name: "Agility", score: abilities.agility, bonus: bonuses.agility, growth: Number(adj.b?.growth ?? 0), correction: Number(adj.b?.correction ?? 0) }
+        { key: "a", name: "Dexterity", score: abilities.dexterity, bonus: bonuses.dexterity, growth: Number(adj.a?.growth ?? 0), correction: Number(adj.a?.correction ?? 0), temporary: Number(adj.a?.temporary ?? 0) },
+        { key: "b", name: "Agility", score: abilities.agility, bonus: bonuses.agility, growth: Number(adj.b?.growth ?? 0), correction: Number(adj.b?.correction ?? 0), temporary: Number(adj.b?.temporary ?? 0) }
       ]},
       { group: "Body", baseKey: "body", base: Number(base.body ?? 0), abilities: [
-        { key: "c", name: "Strength", score: abilities.strength, bonus: bonuses.strength, growth: Number(adj.c?.growth ?? 0), correction: Number(adj.c?.correction ?? 0) },
-        { key: "d", name: "Vitality", score: abilities.vitality, bonus: bonuses.vitality, growth: Number(adj.d?.growth ?? 0), correction: Number(adj.d?.correction ?? 0) }
+        { key: "c", name: "Strength", score: abilities.strength, bonus: bonuses.strength, growth: Number(adj.c?.growth ?? 0), correction: Number(adj.c?.correction ?? 0), temporary: Number(adj.c?.temporary ?? 0) },
+        { key: "d", name: "Vitality", score: abilities.vitality, bonus: bonuses.vitality, growth: Number(adj.d?.growth ?? 0), correction: Number(adj.d?.correction ?? 0), temporary: Number(adj.d?.temporary ?? 0) }
       ]},
       { group: "Mind", baseKey: "mind", base: Number(base.mind ?? 0), abilities: [
-        { key: "e", name: "Intelligence", score: abilities.intelligence, bonus: bonuses.intelligence, growth: Number(adj.e?.growth ?? 0), correction: Number(adj.e?.correction ?? 0) },
-        { key: "f", name: "Spirit", score: abilities.spirit, bonus: bonuses.spirit, growth: Number(adj.f?.growth ?? 0), correction: Number(adj.f?.correction ?? 0) }
+        { key: "e", name: "Intelligence", score: abilities.intelligence, bonus: bonuses.intelligence, growth: Number(adj.e?.growth ?? 0), correction: Number(adj.e?.correction ?? 0), temporary: Number(adj.e?.temporary ?? 0) },
+        { key: "f", name: "Spirit", score: abilities.spirit, bonus: bonuses.spirit, growth: Number(adj.f?.growth ?? 0), correction: Number(adj.f?.correction ?? 0), temporary: Number(adj.f?.temporary ?? 0) }
       ]}
     ];
 
@@ -262,7 +281,11 @@ export class SW25ActorSheet extends ActorSheet {
     context.languages = languageOverride ? savedLanguages : importedNames.map(languageEntry);
     this._sheetLanguages = foundry.utils.deepClone(context.languages);
     context.consumables = [...context.equipment, ...context.weapons].filter(item => item.system.consumable);
-    context.inventoryItems = [...context.equipment, ...context.weapons, ...context.armour].filter(item => !item.system.consumable);
+    context.inventoryItems = [
+      ...context.equipment,
+      ...context.weapons.filter(item => item.system.inventoryPrimary !== false),
+      ...context.armour
+    ].filter(item => !item.system.consumable);
     const automaticFailures = Array.isArray(system.automaticFailures) ? system.automaticFailures : [];
     context.automaticFeatureSlots = Array.from({ length: 10 }, (_, index) => ({ index, checked: Boolean(automaticFailures[index]) }));
     const workSkills = Array.isArray(system.workSkills) ? system.workSkills : [];
@@ -446,6 +469,14 @@ export class SW25ActorSheet extends ActorSheet {
     });
 
     html.find("[data-action='post-class-feature']").on("click", this._onPostClassFeature.bind(this));
+    html.find("[data-action='toggle-spell-favourite']").on("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const itemId = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
+      const spell = this.actor.items.get(itemId);
+      if (!spell || spell.type !== "spell") return;
+      await spell.update({ "system.favourite":!Boolean(spell.system.favourite) });
+    });
 
     const clonedWorkSkills = () => foundry.utils.deepClone(Array.isArray(this.actor.system.workSkills) ? this.actor.system.workSkills : []);
     this._expandedWorkSkills ??= new Set();
@@ -571,6 +602,10 @@ export class SW25ActorSheet extends ActorSheet {
     html.find("[data-action='select-magic-class']").on("change", async event => this.actor.update({"system.combat.magicClassId":event.currentTarget.value}));
 
     html.find("[data-action='add-class']").on("click", async event => { event.preventDefault(); await this._openAddClassDialog(); });
+    html.find("[data-action='import-accessory']").on("click", async event => {
+      event.preventDefault();
+      await game.sw25.importer.importUrl("http://sw25.wikidot.com/items:accessories", this.actor);
+    });
     html.find("[data-action='add-inventory']").on("click", async event => { event.preventDefault(); await this._openAddInventoryDialog(); });
     html.find("[data-action='add-language']").on("click", async event => { event.preventDefault(); await this._openAddLanguageDialog(); });
     html.find("[data-action='add-armour']").on("click", async event => { event.preventDefault(); await this._openArmourDialog(); });
@@ -611,10 +646,40 @@ export class SW25ActorSheet extends ActorSheet {
     });
     html.find("[data-action='toggle-feat']").on("click", event => event.currentTarget.closest(".feat-entry")?.classList.toggle("expanded"));
 
+    html.find("[data-action='post-item']").on("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const itemId = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item) return;
+      const escape = value => foundry.utils.escapeHTML(String(value ?? "")).replace(/\n/g, "<br>");
+      const description = item.system.summary || item.system.description || item.system.notes || "";
+      const featDetails = item.type === "feat"
+        ? `<p><strong>Prerequisite:</strong> ${escape(item.system.prerequisite || "—")} &nbsp; <strong>Use:</strong> ${escape(item.system.use || "—")}</p>`
+        : `<p><strong>Type:</strong> ${escape(item.type)} &nbsp; <strong>Quantity:</strong> ${Math.max(0, Number(item.system.quantity ?? 1))}</p>`;
+      await ChatMessage.create({
+        speaker:ChatMessage.getSpeaker({ actor:this.actor }),
+        content:`<div class="sw25-chat-card"><h3>${escape(item.name)}</h3>${featDetails}${description ? `<p>${escape(description)}</p>` : ""}</div>`
+      });
+    });
+
     html.find("[data-action='edit-class-level']").on("change", async event => {
       const itemId = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
       const item = this.actor.items.get(itemId);
       if (item) await item.update({"system.level": Number(event.currentTarget.value || 0)});
+    });
+
+    html.find("[data-action='delete-class']").on("click", async event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const itemId = event.currentTarget.closest("[data-item-id]")?.dataset.itemId;
+      const item = this.actor.items.get(itemId);
+      if (!item || item.type !== "class") return;
+      const confirmed = await Dialog.confirm({
+        title:"Delete Class",
+        content:`<p>Delete <strong>${foundry.utils.escapeHTML(item.name)}</strong>?</p>`
+      });
+      if (confirmed) await item.delete();
     });
 
     html.find("[data-action='edit-item']").on("click", event => {

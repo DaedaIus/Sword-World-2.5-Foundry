@@ -51,7 +51,9 @@ export function parseMonsterPage(input = "", url = "") {
       if (/Accuracy|Fighting Style/i.test(cells.join(" "))) continue;
       let compact = cells.filter(cell => cell !== "");
       if (compact.length < 7) {
-        const flat = plain(line).match(/^(.+?)\s+(-?\d+\s*(?:\(\d+\))?)\s*(\d+d(?:6)?(?:\s*[+-]\s*\d+)?)\s+(-?\d+\s*(?:\(\d+\))?)\s*(-?\d+)\s+(-?\d+|-)\s+(-?\d+|-)$/i);
+        const flatLine = plain(line);
+        const flat = flatLine.match(/^(.+?)\s+(-?\d+\s*(?:\(\d+\))?)\s*(\d+d(?:6)?(?:\s*[+-]\s*\d+)?)\s+(-?\d+\s*(?:\(\d+\))?)\s*(-?\d+)\s+(-?\d+|-)\s+(-?\d+|-)$/i)
+          || flatLine.match(/^(.+?)(-?\d+\s*\(\d+\))\s*(\d+d(?:6)?(?:\s*[+-]\s*\d+)?)\s+(-?\d+\s*(?:\(\d+\))?)\s*(-?\d+)\s+(-?\d+|-)\s+(-?\d+|-)$/i);
         if (!flat) continue;
         compact = flat.slice(1);
       }
