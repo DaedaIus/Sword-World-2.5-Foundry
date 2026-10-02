@@ -1,5 +1,6 @@
 import { parseMonsterPage } from "./monster-parser.mjs";
-import { parseEquipmentTables } from "./equipment-parser.mjs";
+import { parseClassSpecificItems, parseEquipmentTables } from "./equipment-parser.mjs";
+import { defaultFeatureDefenseModifier } from "../rules/feature-defense.mjs";
 
 export class SW25Importer {
   static async open(actor = null) {
@@ -162,6 +163,17 @@ export class SW25Importer {
     const critical = criticalModifierMatch ? 0 : Number.isFinite(criticalNumber)
       ? criticalNumber
       : ({ "⑩": 10, "⑪": 11, "⑫": 12 }[criticalToken] ?? criticalSuffix[criticalToken.slice(-1)] ?? 0);
+    const specialDamageBands = lines.map(line => {
+      const match = line.match(/^\s*\|?\s*(\d+)\s*[-–]\s*(\d+)\s*\|?\s+(.+?)\s*\|?\s*$/i);
+      if (!match || !/magic power/i.test(match[3]) || !/damage/i.test(match[3])) return null;
+      const text = match[3].replace(/^\|\s*/, "").replace(/\s*\|$/, "").trim();
+      const bonusMatch = text.match(/(\d+)\s*\+\s*Magic Power/i);
+      return {
+        min:Number(match[1]), max:Number(match[2]), bonus:Number(bonusMatch?.[1] || 0),
+        damageType:/physical damage/i.test(text) ? "physical" : "magical",
+        text
+      };
+    }).filter(Boolean);
     const description = lines.filter(line =>
       line !== name && line !== heading && line !== titleLine && !ignoredTitles.test(line) &&
       !/^#{1,6}\s+/.test(line) && !metadataPatterns.test(line) &&
@@ -182,6 +194,7 @@ export class SW25Importer {
       critical,
       criticalModifier,
       hasPowerTable,
+      specialDamageBands,
       metadata,
       resourceData,
       description,
@@ -204,6 +217,7 @@ export class SW25Importer {
       critical: parsed.critical,
       criticalModifier: parsed.criticalModifier,
       hasPowerTable: parsed.hasPowerTable,
+      specialDamageBands: parsed.specialDamageBands || [],
       school: parsed.className,
       level: Number(String(parsed.requirement).match(/\d+/)?.[0] || 1),
       metadata: parsed.metadata,
@@ -235,21 +249,34 @@ export class SW25Importer {
     return url.toString();
   }
 
-  static async fetchPage(url) {
-    // Wikidot does not expose CORS headers. Try several reader URL forms,
-    // because r.jina.ai has changed how it handles colons in Wikidot paths.
+  static readerTargets(url) {
     const parsed = new URL(url);
     const path = `${parsed.pathname}${parsed.search}`;
     const encodedPath = `${parsed.pathname.replace(/:/g, "%3A")}${parsed.search}`;
-    const targets = [
+    const httpTarget = `http://${parsed.host}${path}`;
+    const httpsTarget = `https://${parsed.host}${path}`;
+    return [...new Set([
+      // Wikidot's HTTPS endpoint is inconsistent behind the reader. The fully
+      // encoded HTTP target is currently the most reliable form and was
+      // previously missing from this list.
+      `https://r.jina.ai/${encodeURIComponent(httpTarget)}`,
+      // Jina Reader now rejects the older path-style form for some Wikidot
+      // pages, but accepts the same URL when the complete target is encoded.
+      `https://r.jina.ai/${encodeURIComponent(httpsTarget)}`,
       `https://r.jina.ai/https://${parsed.host}${path}`,
       `https://r.jina.ai/http://${parsed.host}${path}`,
       `https://r.jina.ai/https://${parsed.host}${encodedPath}`,
       `https://r.jina.ai/http://${parsed.host}${encodedPath}`
-    ];
+    ])];
+  }
+
+  static async fetchPage(url) {
+    // Wikidot does not expose CORS headers. Try several reader URL forms,
+    // because r.jina.ai has changed how it handles colons in Wikidot paths.
+    const targets = this.readerTargets(url);
 
     const errors = [];
-    for (const readerUrl of [...new Set(targets)]) {
+    for (const readerUrl of targets) {
       try {
         const response = await fetch(readerUrl, { headers: { Accept: "text/plain, text/markdown, text/html" } });
         const text = await response.text();
@@ -314,7 +341,7 @@ export class SW25Importer {
       const category = this.weaponCategoryFromUrl(url);
       const weaponCategories = [
         "axes", "swords", "spears", "maces", "staves", "flails",
-        "warhammers", "bows", "crossbows", "guns", "thrown"
+        "warhammers", "bows", "crossbows", "guns", "thrown", "wrestling"
       ];
       if (weaponCategories.includes(category.toLowerCase())) {
         globalThis.SW25_LAST_WEAPON_SOURCE = String(fetched.text ?? "");
@@ -391,11 +418,15 @@ export class SW25Importer {
     const equipmentPages = {
       "items:general-equipment":{},
       "items:adventure-tools-consumable":{ defaultCategory:"Adventure Tools (Consumable)", consumable:true },
-      "items:accessories":{}
+      "items:herbs-potions-chemicals":{ consumable:true },
+      "items:accessories":{},
+      "items:class-specific":{ classSpecific:true }
     };
     if (slug in equipmentPages) {
       if (!actor) throw new Error("Equipment tables must be imported onto a character.");
-      const tables = parseEquipmentTables(fetched.text, url, equipmentPages[slug]);
+      const tables = equipmentPages[slug].classSpecific
+        ? parseClassSpecificItems(fetched.text, url)
+        : parseEquipmentTables(fetched.text, url, equipmentPages[slug]);
       if (!tables.length) throw new Error("No equipment tables could be read from this page.");
       const selected = await this.selectEquipment(tables);
       if (!selected) return null;
@@ -442,6 +473,11 @@ export class SW25Importer {
       price:equipment.price,
       priceText:equipment.priceText,
       reputationRequirement:equipment.reputationRequirement,
+      hasPowerTable:Boolean(equipment.hasPowerTable),
+      power:Number(equipment.power ?? 0),
+      powerTable:equipment.powerTable || {},
+      critical:Number(equipment.critical ?? 0),
+      additionalDamage:Number(equipment.additionalDamage ?? 0),
       notes:equipment.notes,
       description:equipment.notes,
       sourceUrl:equipment.sourceUrl
@@ -982,35 +1018,35 @@ export class SW25Importer {
 
     if (slug === "items:nonmetallic-armor") return [
       { name: "B-Rank Nonmetallic Armor", items: [
-        make("Cloth Armor", 1, 0, 2, "Grapplers may equip."),
-        make("Point Guard", 1, 1, 0, "Grappler only."),
+        make("Cloth Armor", 1, 0, 2, "Martial Artists may equip."),
+        make("Point Guard", 1, 1, 0, "Martial Artist only."),
         make("Soft Leather", 7, 0, 3),
         make("Hard Leather", 13, 0, 4),
         make("Mana Coat", 1, 0, 0, "Defense is the Intelligence modifier of the wearer. Upper limit 6."),
         make("Mana Coat+", 1, 0, 0, "Defense is the Intelligence modifier of the wearer. Upper limit 8."),
-        make("Mimore's Cloth Armor", 2, 0, 2, "Grapplers may equip. Evasion check +2 when not holding anything in both hands."),
+        make("Mimore's Cloth Armor", 2, 0, 2, "Martial Artists may equip. Evasion check +2 when not holding anything in both hands."),
         make("Robe of Thorns", 2, 0, 2, "Deals 2d magic damage to anything approaching."),
-        make("Combat Maid/Butler Outfit", 10, 1, 0, "Grapplers may equip. Magic Damage -3.")
+        make("Combat Maid/Butler Outfit", 10, 1, 0, "Martial Artists may equip. Magic Damage -3.")
       ]},
       { name: "A-Rank Nonmetallic Armor", items: [
-        make("Aramid Coat", 5, 1, 2, "Grapplers may equip."),
+        make("Aramid Coat", 5, 1, 2, "Martial Artists may equip."),
         make("Breast Armor", 10, 0, 5),
         make("Bone Vest", 16, 0, 6),
-        make("Mimore's Fine Cloth Armor", 6, 1, 2, "Grapplers may equip. Evasion check +2 when not holding anything in both hands."),
+        make("Mimore's Fine Cloth Armor", 6, 1, 2, "Martial Artists may equip. Evasion check +2 when not holding anything in both hands."),
         make("Windbreaker Surcoat", 12, 1, 3, "Can avoid wind-type damage once a day.")
       ]},
       { name: "S-Rank Nonmetallic Armor", items: [
         make("Fine Leather", 6, 1, 4),
-        make("Lynx Vest", 8, 2, 3, "Grappler only."),
+        make("Lynx Vest", 8, 2, 3, "Martial Artist only."),
         make("Tiger Band", 10, 1, 5),
         make("Dragon Scale", 14, 1, 6),
-        make("Mimore's Finest Cloth Armor", 6, 2, 2, "Grapplers may equip. Evasion check +2 when not holding anything in both hands.")
+        make("Mimore's Finest Cloth Armor", 6, 2, 2, "Martial Artists may equip. Evasion check +2 when not holding anything in both hands.")
       ]},
       { name: "SS-Rank Nonmetallic Armor", items: [
         make("Astral Guard", 6, 1, 7, "Magic Damage -3."),
         make("Silent Cloak", 11, 1, 8, "Hide checks +2."),
         make("Alabaster Shell", 14, 1, 9),
-        make("Phoenix Cloak", 17, 2, 8, "Grappler only."),
+        make("Phoenix Cloak", 17, 2, 8, "Martial Artist only."),
         make("Divine Skin", 18, 1, 10, "Willpower +2.")
       ]}
     ];
@@ -1046,6 +1082,8 @@ export class SW25Importer {
   static clean(text = "") {
     return String(text)
       .replace(/\u00a0/g, " ")
+      .replace(/\bGrapplers\b/gi, "Martial Artists")
+      .replace(/\bGrappler\b/gi, "Martial Artist")
       .replace(/[ \t]+/g, " ")
       .replace(/\n[ \t]+/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
@@ -1188,6 +1226,7 @@ export class SW25Importer {
   }
 
   static async createClass(parsed, actor) {
+    const importedName = this.preferredClassName(parsed.name || "Imported Class");
     const system = {
       category: parsed.category || "A",
       sourceUrl: parsed.sourceUrl || "",
@@ -1202,22 +1241,25 @@ export class SW25Importer {
     };
 
     if (!actor) {
-      return Item.create({ name: parsed.name || "Imported Class", type: "class", system: { ...system, level: 1 } });
+      return Item.create({ name: importedName, type: "class", system: { ...system, level: 1 } });
     }
 
-    const key = value => this.clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
-    const existing = actor.items.find(item => item.type === "class" && key(item.name) === key(parsed.name));
+    const key = value => {
+      const normalized = this.clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+      return normalized === "grappler" ? "martialartist" : normalized;
+    };
+    const existing = actor.items.find(item => item.type === "class" && key(item.name) === key(importedName));
     let item;
     if (existing) {
       await existing.update({
-        name: parsed.name,
+        name: importedName,
         ...Object.fromEntries(Object.entries(system).map(([field, value]) => [`system.${field}`, value]))
       });
       item = existing;
-      ui.notifications.info(`${parsed.name} was updated with imported class details.`);
+      ui.notifications.info(`${importedName} was updated with imported class details.`);
     } else {
       [item] = await actor.createEmbeddedDocuments("Item", [{
-        name: parsed.name || "Imported Class",
+        name: importedName,
         type: "class",
         system: { ...system, level: 1 }
       }]);
@@ -1326,6 +1368,7 @@ export class SW25Importer {
       description: this.featDescription(raw),
       sourceUrl: url,
       rawText: this.clean(plain)
+      ,defenseModifier: defaultFeatureDefenseModifier(name)
     };
   }
 
@@ -1356,6 +1399,7 @@ export class SW25Importer {
       description: this.featDescription(text),
       sourceUrl: url,
       rawText: this.clean(text)
+      ,defenseModifier: defaultFeatureDefenseModifier(name)
     };
   }
 
@@ -1368,6 +1412,7 @@ export class SW25Importer {
       description: parsed.description || parsed.summary || "",
       sourceUrl: parsed.sourceUrl || "",
       rawText: parsed.rawText || ""
+      ,defenseModifier: Number(parsed.defenseModifier ?? defaultFeatureDefenseModifier(parsed.name)) || 0
     };
 
     if (!actor) {
@@ -1452,7 +1497,7 @@ export class SW25Importer {
 
     const rankFromLine = value => {
       const match = cleanLine(value).match(
-        /(?:^|\b)(SS|S|A|B)\s*(?:-|‐|–|—)?\s*Rank\s+(?:Swords?|Axes?|Staves|Weapons?)/i
+        /(?:^|\b)(SS|S|A|B)\s*(?:-|‐|–|—)?\s*Rank\s+(?:Swords?|Axes?|Staves|Wrestling|Weapons?)/i
       );
       if (match) return match[1].toUpperCase();
       const gunMatch = cleanLine(value).match(/(?:^|\b)(SS|S|A|B)\s*[- ]?\s*Rank\s+Guns?/i);
@@ -1474,7 +1519,7 @@ export class SW25Importer {
     const compactPattern = new RegExp(
       "^(.*?)" + stancePattern +
       "\\s*(\\d+)" +                 // Minimum Strength
-      "([+＋]\\d+|-)" +              // Accuracy, '-' means zero
+      "([+＋-]\\d+|-)" +             // Accuracy, '-' means zero
       "\\s*(\\d+)" +                 // Power
       "\\s+(-?\\d+)" +               // 3
       "\\s+(-?\\d+)" +               // 4
@@ -1487,7 +1532,7 @@ export class SW25Importer {
       "\\s+(-?\\d+)" +               // 11
       "\\s+(-?\\d+)" +               // 12
       "\\s+([③④⑤⑥⑦⑧⑨⑩⑪⑫]|\\d+)" + // Critical
-      "([+＋]\\d+|-)" +               // Additional Damage
+      "(-|[+＋-]\\d+)" +              // Additional Damage
       "\\s*([\\d,]+(?:\\s*\\(Not for Sale\\))?)?" + // Price
       "\\s*(.*)$",
       "i"
@@ -1723,12 +1768,15 @@ export class SW25Importer {
     const primaryKeys = new Set();
     const docs = parsed.map(weapon => {
       const groupKey = `${weapon.rank || ""}|${weapon.name}`.toLowerCase();
-      const inventoryPrimary = !primaryKeys.has(groupKey);
+      const wrestling = String(weapon.category || "").trim().toLowerCase() === "wrestling"
+        || /\/items:wrestling(?:$|[?#])/i.test(String(weapon.sourceUrl || ""));
+      const inventoryPrimary = wrestling ? false : !primaryKeys.has(groupKey);
       primaryKeys.add(groupKey);
       return ({
       name: weapon.name,
       type: "weapon",
       system: {
+        equipped: wrestling,
         category: weapon.category || "",
         rank: weapon.rank || "",
         inventoryPrimary,
@@ -2027,9 +2075,14 @@ export class SW25Importer {
     const cleaned = this.clean(value);
     if (!cleaned || /^(?:none|—|-)$/i.test(cleaned)) return [];
     return cleaned
-      .split(/\s*(?:,|\+|&|\/|\band\b|\n)\s*/i)
-      .map(part => this.clean(part).replace(/\s+(?:level|lv\.?)[ ]*\d+$/i, ""))
+      .split(/\s*(?:,|\+|&|\/|\band\b|\bor\b|\n)\s*/i)
+      .map(part => this.preferredClassName(this.clean(part).replace(/\s+(?:level|lv\.?)[ ]*\d+$/i, "")))
       .filter(Boolean);
+  }
+
+  static preferredClassName(name = "") {
+    const cleaned = this.clean(name);
+    return /^grappler$/i.test(cleaned) ? "Martial Artist" : cleaned;
   }
 
   static classCategory(name = "") {
@@ -2042,19 +2095,21 @@ export class SW25Importer {
   }
 
   static backgroundRowFromCells(cells) {
-    if (cells.length < 5) return null;
-    const roll = this.parseRollRange(cells[0]);
-    const stats = this.parseStatTriplet(cells[3]);
-    if (!roll || !stats) return null;
+    if (cells.length < 4) return null;
+    const possibleRoll = this.parseRollRange(cells[0]);
+    const offset = possibleRoll ? 1 : 0;
+    if (cells.length < offset + 4) return null;
+    const stats = this.parseStatTriplet(cells[offset + 2]);
+    if (!stats) return null;
     return {
-      roll,
-      name: this.clean(cells[1]),
-      startingClasses: this.parseStartingClasses(cells[2]),
-      startingClassesText: this.clean(cells[2]),
+      roll: possibleRoll,
+      name: this.clean(cells[offset]),
+      startingClasses: this.parseStartingClasses(cells[offset + 1]),
+      startingClassesText: this.clean(cells[offset + 1]),
       skill: stats.skill,
       body: stats.body,
       mind: stats.mind,
-      experience: this.parseExperience(cells[4])
+      experience: this.parseExperience(cells[offset + 3])
     };
   }
 
@@ -2153,8 +2208,9 @@ export class SW25Importer {
         const cells = line.replace(/^\||\|$/g, "").split("|").map(cell => this.clean(cell));
         if (cells.every(cell => /^:?-+:?$/.test(cell))) continue;
         const joined = cells.join(" ").toLowerCase();
-        if (/\b2d\b/.test(joined) && /background/.test(joined) && /(skill|body|mind)/.test(joined)) {
+        if (/background/.test(joined) && /starting classes?/.test(joined) && /(skill|body|mind)/.test(joined) && /experience/.test(joined)) {
           beginTable();
+          current.rollable = /\b2d\b/.test(joined);
           continue;
         }
         if (!current) continue;
@@ -2170,8 +2226,9 @@ export class SW25Importer {
         .map(cell => this.clean(cell))
         .filter(Boolean);
       const joined = columns.join(" ").toLowerCase();
-      if (/\b2d\b/.test(joined) && /background/.test(joined) && /starting classes?/.test(joined) && /experience/.test(joined)) {
+      if (/background/.test(joined) && /starting classes?/.test(joined) && /experience/.test(joined) && /(skill|body|mind)/.test(joined)) {
         beginTable();
+        current.rollable = /\b2d\b/.test(joined);
         continue;
       }
       if (current && columns.length >= 5) {
@@ -2185,7 +2242,9 @@ export class SW25Importer {
       // Last-resort parser for fully flattened rows such as:
       // 2-4 Scholar Sage 8/10/8 2,500
       if (current) {
-        const flattened = this.parseFlattenedBackgroundRow(line);
+        const flattened = current.rollable === false
+          ? this.parseFixedBackgroundRow(line)
+          : this.parseFlattenedBackgroundRow(line);
         if (flattened) current.entries.push(flattened);
       }
     }
@@ -2205,9 +2264,11 @@ export class SW25Importer {
 
     const middle = this.clean(match[2]);
     const knownClasses = [
-      "Artificer", "Conjurer", "Druid", "Fairy Tamer", "Fencer", "Fighter",
-      "Grappler", "Marksman", "Priest", "Sorcerer", "Scout", "Ranger", "Sage",
-      "Enhancer", "Bard", "Rider", "Alchemist", "Geomancer", "Warleader", "Shooter"
+      "Fairy Tamer", "Martial Artist", "Dark Hunter", "Battle Dancer",
+      "Daemonologist", "Bibliomancer", "Abyss Gazer", "Artificer", "Conjurer",
+      "Druid", "Fencer", "Fighter", "Grappler", "Marksman", "Priest",
+      "Sorcerer", "Scout", "Ranger", "Sage", "Enhancer", "Bard", "Rider",
+      "Alchemist", "Geomancer", "Tactician", "Warleader", "Heritor", "Shooter"
     ];
     const classPattern = new RegExp(`\\b(${knownClasses.join("|")})(?:\\s*(?:or|&|and|\\+)\\s*(${knownClasses.join("|")}))?$`, "i");
     const classMatch = middle.match(classPattern);
@@ -2289,11 +2350,12 @@ export class SW25Importer {
 
     const table = tables[tableIndex];
     const fixed = Boolean(table.fixed || (table.entries.length === 1 && !table.entries[0].roll));
+    const rollable = !fixed && table.entries.every(entry => entry.roll);
     return new Promise(resolve => {
       const rows = table.entries.map((entry, index) => `
         <label class="sw25-background-choice" data-index="${index}">
           <input type="radio" name="background-entry" value="${index}" ${fixed && index === 0 ? "checked" : ""}>
-          <span>${foundry.utils.escapeHTML(entry.roll?.label || "Fixed")}</span>
+          <span>${foundry.utils.escapeHTML(entry.roll?.label || "Choice")}</span>
           <strong>${foundry.utils.escapeHTML(entry.name)}</strong>
           <span>${foundry.utils.escapeHTML(entry.startingClassesText || "—")}</span>
           <span>${entry.skill}/${entry.body}/${entry.mind}</span>
@@ -2304,10 +2366,10 @@ export class SW25Importer {
         title: `${raceName}: ${table.name}`,
         content: `
           <div class="sw25-background-prompt">
-            <p>${fixed ? "This race has one fixed background." : "Choose a background directly, or roll 2d6 and use the matching row."}</p>
-            <div class="sw25-background-heading"><span>${fixed ? "Type" : "2d"}</span><span>Background</span><span>Starting Classes</span><span>Skill/Body/Mind</span><span>Experience</span></div>
+            <p>${fixed ? "This race has one fixed background." : rollable ? "Choose a background directly, or roll 2d6 and use the matching row." : "Choose one of the backgrounds in this table."}</p>
+            <div class="sw25-background-heading"><span>${rollable ? "2d" : "Type"}</span><span>Background</span><span>Starting Classes</span><span>Skill/Body/Mind</span><span>Experience</span></div>
             ${rows}
-            ${fixed ? "" : '<div class="sw25-background-roll-result"><button type="button" class="roll-background"><i class="fas fa-dice"></i> Roll 2d6</button><strong class="rolled-background-result"></strong></div>'}
+            ${rollable ? '<div class="sw25-background-roll-result"><button type="button" class="roll-background"><i class="fas fa-dice"></i> Roll 2d6</button><strong class="rolled-background-result"></strong></div>' : ""}
           </div>`,
         buttons: {
           apply: {
@@ -2601,7 +2663,8 @@ Contractors gain the ability to release the Magitech Angel from its dormant stat
             source: "racial",
             description: ability.description,
             sourceRace: parsed.name,
-            sourceUrl: parsed.sourceUrl
+            sourceUrl: parsed.sourceUrl,
+            defenseModifier: defaultFeatureDefenseModifier(ability.name)
           }
         })));
       } else {

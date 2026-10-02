@@ -1,3 +1,6 @@
+import { expireNaturalPower, naturalPowerRemainder } from "../rules/spell-damage.mjs";
+import { processRegenerationTurn } from "../rules/spell-effects.mjs";
+
 const FLAG_SCOPE = "sword-world-25";
 const FLAG_KEY = "sideInitiative";
 const SOCKET = "system.sword-world-25";
@@ -5,6 +8,11 @@ let sideTurnWindow = null;
 
 export const firstSide = (playerValues = [], monsterValue = 0) =>
   playerValues.length && Math.max(...playerValues.map(Number)) >= Number(monsterValue) ? "players" : "monsters";
+
+export const playerInitiativeModifier = (scoutLevel = 0, tacticianLevel = 0, agilityModifier = 0, bonus = 0) => {
+  const classLevel = Math.max(Number(scoutLevel) || 0, Number(tacticianLevel) || 0);
+  return (classLevel > 0 ? classLevel + (Number(agilityModifier) || 0) : 0) + (Number(bonus) || 0);
+};
 
 export const sideTransition = (startingSide, completedSide) => ({
   phase: startingSide === completedSide ? (completedSide === "players" ? "monsters" : "players") : startingSide,
@@ -81,6 +89,16 @@ class SW25SideTurnWindow extends SideTurnApplication {
     const done = new Set(state?.playersDone || []);
     const players = characterCombatants(combat);
     const remaining = players.filter(combatant => !done.has(combatant.id));
+    const naturalPower = players.map(combatant => {
+      const resource = combatant.actor?.getFlag("sword-world-25", "naturalPower");
+      if (!resource || (!game.user.isGM && !combatant.actor?.isOwner)) return null;
+      return {
+        name:combatant.name,
+        added:Number(resource.added) || 0,
+        spent:Number(resource.spent) || 0,
+        remaining:naturalPowerRemainder(resource)
+      };
+    }).filter(Boolean);
     return {
       active:Boolean(state?.active),
       phase:state?.phase || "players",
@@ -92,7 +110,8 @@ class SW25SideTurnWindow extends SideTurnApplication {
       canEndPlayer:state?.phase === "players" && !game.user.isGM && remaining.some(combatant => combatant.actor?.isOwner),
       gmPlayerControls:state?.phase === "players" && game.user.isGM,
       remainingPlayers:remaining.map(combatant => ({ id:combatant.id, name:combatant.name })),
-      canEndMonsters:state?.phase === "monsters" && game.user.isGM
+      canEndMonsters:state?.phase === "monsters" && game.user.isGM,
+      naturalPower
     };
   }
 
@@ -127,6 +146,41 @@ function openSideTurnWindow(combat = activeCombat()) {
   if (sideTurnWindow && sideTurnWindow.combatId !== combat.id) sideTurnWindow.close();
   sideTurnWindow ??= new SW25SideTurnWindow(combat.id);
   sideTurnWindow.render(true);
+}
+
+async function activateSideTurnsFromTracker(combat = activeCombat()) {
+  if (!combat) return ui.notifications.warn("There is no active combat encounter.");
+  if (!game.user.isGM) return ui.notifications.warn("Only the GM can activate side turns.");
+  if (stateFor(combat)?.active) return openSideTurnWindow(combat);
+
+  const players = characterCombatants(combat);
+  const monsters = monsterCombatants(combat);
+  if (!players.length || !monsters.length) return ui.notifications.warn("Side turns require at least one player and one monster.");
+  const hasInitiative = combatant => combatant.initiative !== null && combatant.initiative !== undefined && Number.isFinite(Number(combatant.initiative));
+  const missingPlayers = players.filter(combatant => !hasInitiative(combatant));
+  const missingMonsters = monsters.filter(combatant => !hasInitiative(combatant));
+  if (missingPlayers.length || missingMonsters.length) {
+    const missing = [...missingPlayers, ...missingMonsters].map(combatant => combatant.name).join(", ");
+    return ui.notifications.warn(`Roll or enter initiative for: ${missing}.`);
+  }
+
+  const playerInitiatives = Object.fromEntries(players.map(combatant => [combatant.id, Number(combatant.initiative)]));
+  const monsterInitiative = Math.max(...monsters.map(combatant => Number(combatant.initiative)));
+  const startingSide = firstSide(Object.values(playerInitiatives), monsterInitiative);
+  const state = {
+    active:true,
+    phase:startingSide,
+    firstPhase:startingSide,
+    playersDone:[],
+    playerInitiatives,
+    monsterInitiative,
+    round:Math.max(1, Number(combat.round || 1))
+  };
+  await saveState(combat, state);
+  if (!combat.started) await combat.startCombat();
+  if (combat.turn !== null) await combat.update({ turn:null });
+  await announce(`<h3>Side Initiative</h3><p><strong>Players:</strong> ${Math.max(...Object.values(playerInitiatives))} &nbsp; <strong>Monsters:</strong> ${monsterInitiative}</p><p><strong>${startingSide === "players" ? "Players" : "Monsters"} act first.</strong></p>`);
+  openSideTurnWindow(combat);
 }
 
 export async function recordPlayerInitiative(actor, total) {
@@ -184,16 +238,22 @@ async function handleAction(payload, userId) {
       return;
     }
     const requested = new Set(payload.combatantIds || []);
+    const alreadyDone = new Set(state.playersDone || []);
     // The requesting client only offers combatants for which actor.isOwner is
     // true. Re-resolving synthetic-token ownership on the GM client can differ
     // in V14, so validate the requested IDs against the encounter rather than
     // rejecting a legitimate request because the GM sees a different Actor.
-    const valid = characterCombatants(combat).filter(combatant => requested.has(combatant.id)).map(combatant => combatant.id);
+    const validCombatants = characterCombatants(combat).filter(combatant => requested.has(combatant.id) && !alreadyDone.has(combatant.id));
+    const valid = validCombatants.map(combatant => combatant.id);
     if (!valid.length) {
       console.warn("Sword World 2.5 | End Turn request did not match an owned player combatant.", { userId, requested:[...requested] });
       return;
     }
-    const playersDone = [...new Set([...(state.playersDone || []), ...valid])];
+    for (const combatant of validCombatants) {
+      await processRegenerationTurn(combatant.actor);
+      await expireNaturalPower(combatant.actor);
+    }
+    const playersDone = [...new Set([...alreadyDone, ...valid])];
     const allIds = characterCombatants(combat).map(combatant => combatant.id);
     const complete = allIds.length > 0 && allIds.every(id => playersDone.includes(id));
     if (!complete) await saveState(combat, { ...state, playersDone, phase:"players" });
@@ -263,15 +323,26 @@ function renderSideControls(app, html) {
   root.classList.remove("sw25-side-active");
   document.body.classList.remove("sw25-side-combat-active");
   root.querySelector(".sw25-side-initiative")?.remove();
-  if (!combat || !state?.active) return;
+  if (!combat) return;
+  const panel = document.createElement("section");
+  panel.className = "sw25-side-initiative sw25-side-launcher";
+  if (!state?.active) {
+    if (game.user.isGM) {
+      panel.innerHTML = `<button type="button" data-sw25-side-action="activate"><i class="fas fa-people-arrows"></i> Activate Side Turns</button>`;
+    } else {
+      panel.innerHTML = `<button type="button" data-sw25-side-action="open-window"><i class="fas fa-user-clock"></i> Open Player Turns</button>`;
+    }
+    (root.querySelector(".combat-tracker") || root).append(panel);
+    panel.querySelector("[data-sw25-side-action='activate']")?.addEventListener("click", () => activateSideTurnsFromTracker(combat));
+    panel.querySelector("[data-sw25-side-action='open-window']")?.addEventListener("click", () => openSideTurnWindow(combat));
+    return;
+  }
   root.classList.add("sw25-side-active");
   document.body.classList.add("sw25-side-combat-active");
   clearTrackerHighlights(root);
   clearIndividualTurnMarkers();
   const done = new Set(state.playersDone || []);
-  const panel = document.createElement("section");
-  panel.className = "sw25-side-initiative sw25-side-launcher";
-  panel.innerHTML = `<button type="button" data-sw25-side-action="open-window"><i class="fas fa-people-arrows"></i> Open Side Turns</button>`;
+  panel.innerHTML = `<button type="button" data-sw25-side-action="open-window"><i class="fas ${game.user.isGM ? "fa-people-arrows" : "fa-user-clock"}"></i> ${game.user.isGM ? "Open Side Turns" : "Open Player Turns"}</button>`;
   (root.querySelector(".combat-tracker") || root).append(panel);
   panel.querySelector("[data-sw25-side-action='open-window']")?.addEventListener("click", () => openSideTurnWindow(combat));
 }
@@ -320,6 +391,9 @@ export async function initializeSideInitiative() {
     setTimeout(clearIndividualTurnMarkers, 100);
     setTimeout(() => clearTrackerHighlights(), 0);
     queueSideControls(combat);
+  });
+  Hooks.on("updateActor", actor => {
+    if (actor.type === "character" && sideTurnWindow?.rendered) sideTurnWindow.render(false);
   });
   Hooks.on("canvasReady", () => {
     if (stateFor(activeCombat())?.active) clearIndividualTurnMarkers();

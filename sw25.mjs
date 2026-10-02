@@ -6,6 +6,12 @@ import { resolveAttackingClass, rollWeaponDamage } from "./module/rules/weapon-r
 import { abilityBonus } from "./module/rules/weapon-damage.mjs";
 import { initializeSideInitiative } from "./module/combat/side-initiative.mjs";
 import { damageApplicationButton, initializeDamageApplication } from "./module/combat/damage-application.mjs";
+import { addNaturalPowerMP } from "./module/rules/spell-damage.mjs";
+import { initializeSpellEffects } from "./module/rules/spell-effects.mjs";
+import { initializeEvasionChallenges } from "./module/combat/evasion-challenge.mjs";
+import { criticalFailureHTML, markCriticalFailure } from "./module/rules/critical-failure.mjs";
+import { initializeRecoveryItems } from "./module/rules/recovery-items.mjs";
+import { initializeClassGrants } from "./module/rules/class-grants.mjs";
 
 Hooks.once("init", () => {
   game.sw25 = { importer: SW25Importer };
@@ -48,10 +54,38 @@ Hooks.once("init", () => {
   });
 });
 
+Hooks.on("preCreateActor", actor => {
+  if (actor.type === "character") actor.updateSource({ "prototypeToken.actorLink":true });
+});
+
+Hooks.on("preCreateToken", token => {
+  const actor = token.actor ?? game.actors.get(token.actorId);
+  if (actor?.type === "character") token.updateSource({ actorLink:true });
+});
+
 Hooks.once("ready", initializeSideInitiative);
 Hooks.once("ready", initializeDamageApplication);
+Hooks.once("ready", initializeSpellEffects);
+Hooks.once("ready", initializeEvasionChallenges);
+Hooks.once("ready", initializeRecoveryItems);
+Hooks.once("ready", initializeClassGrants);
 
 Hooks.on("renderChatMessage", (message, html) => {
+  if (message.getFlag("sword-world-25", "naturalPowerAdded")) {
+    html.find("[data-sw25-chat-action='add-natural-power']").prop("disabled", true).html('<i class="fas fa-check"></i> MP Added');
+  }
+  html.find("[data-sw25-chat-action='add-natural-power']").on("click", async event => {
+    event.preventDefault();
+    const button = event.currentTarget;
+    const actor = game.actors.get(button.dataset.actorId);
+    if (!actor?.isOwner) return ui.notifications.warn("You do not own the character receiving this MP.");
+    if (message.getFlag("sword-world-25", "naturalPowerAdded")) return ui.notifications.warn("This Natural Power result has already been added.");
+    button.disabled = true;
+    await addNaturalPowerMP(actor, Number(button.dataset.mp || 0));
+    await message.setFlag("sword-world-25", "naturalPowerAdded", true);
+    button.innerHTML = '<i class="fas fa-check"></i> MP Added';
+  });
+
   html.find("[data-sw25-chat-action='roll-spell-damage']").on("click", async event => {
     event.preventDefault();
     const button = event.currentTarget;
@@ -61,6 +95,11 @@ Hooks.on("renderChatMessage", (message, html) => {
     if (!actor || !spell || !castingClass) return ui.notifications.warn("The actor, spell, or casting class could not be found.");
     button.disabled = true;
     const roll = await new Roll("2d6").evaluate();
+    const criticalFailure = await markCriticalFailure(actor, roll);
+    if (criticalFailure) {
+      await roll.toMessage({ speaker:ChatMessage.getSpeaker({ actor }), flavor:`<div class="sw25-chat-card"><h3>${foundry.utils.escapeHTML(spell.name)} Damage</h3>${criticalFailureHTML()}<p>No damage is dealt.</p></div>` });
+      return;
+    }
     const diceTotal = Number(roll.total ?? 0);
     const lookup = String(Math.min(12, Math.max(3, diceTotal)));
     const tableValue = Number(spell.system.powerTable?.[lookup] ?? 0);

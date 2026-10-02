@@ -816,7 +816,7 @@
 .paper-empty { margin:6px; text-align:center; font-style:italic; opacity:.65; }
 .official-page-one { display:grid; grid-template-columns: 282px 1fr 292px; grid-template-rows: 330px 300px 160px; gap:10px; grid-template-areas:"classes portrait biography" "skills abilities inventory" "skills lower inventory"; }
 .class-box{grid-area:classes}.portrait-column{grid-area:portrait}.biography-box{grid-area:biography}.skills-box{grid-area:skills}.ability-score-box{grid-area:abilities}.inventory-box{grid-area:inventory}.languages-box{grid-area:lower;align-self:start;height:150px}.notes-box{grid-area:lower;align-self:end;height:140px;transform:translateY(150px)}
-.class-paper-list { padding:5px; min-height:170px; }.class-row{display:grid;grid-template-columns:1fr 48px;border-bottom:1px solid #aaa}.class-row input{text-align:center}.xp-strip{border-top:2px solid #444;padding:4px}.xp-strip label{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase}.xp-strip input{width:90px;text-align:right}.xp-strip span{font-size:10px;margin-right:8px}.automatic-feats{display:flex;align-items:center;gap:4px;padding:5px;font-size:10px;text-transform:uppercase}.automatic-feats i{width:13px;height:13px;border:1px solid #555;display:block}
+.class-paper-list { padding:5px; min-height:170px; }.class-row{display:grid;grid-template-columns:1fr 48px;border-bottom:1px solid #aaa}.class-row input{text-align:center}.xp-strip{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;border-top:2px solid #444;padding:4px}.xp-strip label{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase}.xp-strip input{width:70px;text-align:right}.xp-strip span{font-size:10px;margin-right:8px}.automatic-feats{display:flex;align-items:center;gap:4px;padding:5px;font-size:10px;text-transform:uppercase}.automatic-feats i{width:13px;height:13px;border:1px solid #555;display:block}
 .portrait-column{display:flex;flex-direction:column;min-width:0}.logo-box{height:68px;display:flex;align-items:center;justify-content:center}.sw-logo{text-align:center;font-weight:bold;font-size:34px;line-height:.72;text-transform:uppercase}.sw-logo small{display:block;font-size:15px;letter-spacing:.12em}.portrait-frame{flex:1;border:3px double #333;overflow:hidden;background:rgba(0,0,0,.035)}.portrait-frame img{width:100%;height:100%;object-fit:contain;border:0}.name-plaque{width:82%;margin:-1px auto 0;padding:7px 12px;border:3px double #333;background:#f6f1e5;z-index:1}.name-plaque input{width:100%;border:0;border-bottom:1px solid #777;background:transparent;text-align:center;font-size:17px;font-weight:bold}
 .biography-box{padding-bottom:5px}.biography-box>label{display:flex;align-items:end;padding:3px 8px;gap:6px;font-size:11px}.biography-box>label input{flex:1}.bio-triple,.bio-double{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;padding:3px 8px}.bio-double{grid-template-columns:1fr 1fr}.bio-triple label,.bio-double label{display:flex;flex-direction:column;font-size:10px}.soulscar-mini{font-size:10px}.soulscar-mini>div{display:flex;gap:3px;padding-top:4px}.soulscar-mini .soulscar-circle{width:14px;height:14px;min-width:14px}.biography-box textarea{width:calc(100% - 16px);height:130px;margin:5px 8px;border:1px solid #999}
 .skill-head,.skill-line{display:grid;grid-template-columns:1fr 42px 55px 34px 34px;align-items:center;min-height:18px;border-bottom:1px solid #aaa;font-size:9px}.skill-head{font-weight:bold;text-transform:uppercase}.skill-line>*{padding:1px 3px}.skill-line button{height:17px;margin:0;padding:0;border:0;background:transparent}.official-skill-groups h3{display:flex;justify-content:space-between;font-size:11px}.official-skill-groups h3 small{font-size:8px;text-transform:none;font-weight:normal}
@@ -903,6 +903,11 @@
 .special-grid input { width:52px; max-width:100%; height:24px; text-align:center; }
 .special-grid button { display:flex; flex-direction:column; justify-content:center; align-items:center; white-space:normal; font-size:9px; line-height:1.1; }
 .special-grid button strong { font-size:17px; }
+.special-grid .special-check-control { display:grid; grid-template-columns:minmax(0,1fr) 48px; gap:3px; min-width:0; min-height:0; }
+.special-grid .special-check-control > button { min-width:0; height:100%; }
+.special-grid .special-check-control > label { width:48px; height:100%; padding:2px; box-sizing:border-box; }
+.special-grid .special-check-control > label span { font-size:8px; }
+.special-grid .special-check-control > label input { width:40px; height:22px; }
 .def-head,.defense-table>div { grid-template-columns:minmax(110px,1fr) 62px 58px 58px 82px; }
 .weapon-head,.weapon-table>div { grid-template-columns:minmax(100px,1fr) 48px 52px 58px 50px 42px 68px 34px; }
 .weapon-table { overflow-x:auto; }
@@ -959,6 +964,8 @@
   overflow-x: hidden;
   scrollbar-width: thin;
 }
+.skill-footnote { flex:0 0 auto; display:block; padding:2px 5px; border-top:1px solid #777; font-size:8px; font-style:italic; }
+.movement-track label small { display:block; font-size:7px; line-height:1.1; text-transform:none; }
 .languages-box { grid-area: lower; align-self: stretch; height: auto; min-height: 0; }
 .notes-box { display:none !important; }
 
@@ -1083,12 +1090,18 @@
 
 /* v0.7.0.18 official-style HP and MP resource frames */
 .sw25-official-sheet .hp-box {
+  position:relative;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   overflow:visible;
 }
+.sw25-official-sheet .death-check-button { position:absolute; top:3px; right:3px; z-index:2; width:26px; height:23px; min-height:0; margin:0; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+.sw25-official-sheet .death-check-button i { margin:0; }
+.sw25-death-check .sw25-death-success { color:#168238; font-size:17px; text-align:center; }
+.sw25-death-check .sw25-death-failure { color:#b3261e; font-size:17px; text-align:center; }
+.sw25-critical-failure { color:#b3261e; font-size:17px; text-align:center; }
 .sw25-official-sheet .resource-heart,
 .sw25-official-sheet .mp-crystal {
   position:relative;
@@ -1895,24 +1908,35 @@ form.sw25-official-sheet .offense-selector > label:nth-of-type(2) input {
 .sw25-monster-sheet .rollable-stat,.sw25-monster-sheet .paired { display:flex; align-items:center; justify-content:center; min-width:0; }
 .sw25-monster-sheet .rollable-stat button { flex:0 0 25px; width:25px; height:22px; margin:0; padding:0; }
 .sw25-monster-sheet .rollable-stat input { flex:1; text-align:center; }
+.sw25-evasion-result .sw25-evasion-success { color:#168238; font-size:18px; text-align:center; }
+.sw25-evasion-result .sw25-evasion-failure { color:#b3261e; font-size:18px; text-align:center; }
 .sw25-monster-sheet .paired input { width:42px; text-align:center; }
 .sw25-monster-sheet .monster-combat-row > button,.sw25-monster-sheet .monster-ability > button,.sw25-monster-sheet .monster-loot > div > button { width:25px; height:22px; margin:0; padding:0; }
-.sw25-monster-sheet .monster-ability { position:relative; display:grid; grid-template-columns:1fr 28px; padding:5px; border-bottom:1px solid #9d9385; }
+.sw25-monster-sheet .monster-ability { position:relative; display:grid; grid-template-columns:1fr 28px 28px; gap:3px; padding:5px; border-bottom:1px solid #9d9385; }
 .sw25-monster-sheet .monster-ability > input { font-weight:bold; }
 .sw25-monster-sheet .monster-ability textarea { grid-column:1 / -1; min-height:58px; resize:vertical; }
 .sw25-monster-sheet .monster-loot > div { display:grid; grid-template-columns:90px 1fr 28px; gap:4px; padding:3px 5px; border-bottom:1px solid #9d9385; }
 .sw25-monster-sheet .monster-description { width:100%; min-height:120px; resize:vertical; padding:6px; }
 .sw25-monster-sheet .monster-hidden { display:flex; height:calc(100% - 95px); flex-direction:column; align-items:center; justify-content:center; color:#6f675c; font-size:20px; }
 .sw25-monster-sheet .monster-hidden i { font-size:48px; }
-.sw25-monster-sheet .monster-initiative-control { display:flex; align-items:center; }
-.sw25-monster-sheet .monster-initiative-control input { flex:1; }
-.sw25-monster-sheet .monster-initiative-control button { flex:0 0 28px; width:28px; height:22px; margin:0; padding:0; }
+.sw25-monster-sheet .monster-initiative-control,
+.sw25-monster-sheet .monster-check-control { display:flex; align-items:center; }
+.sw25-monster-sheet .monster-initiative-control input,
+.sw25-monster-sheet .monster-check-control input { flex:1; min-width:0; }
+.sw25-monster-sheet .monster-initiative-control button,
+.sw25-monster-sheet .monster-check-control button { flex:0 0 28px; width:28px; height:22px; margin:0; padding:0; }
 .sw25-side-initiative { margin:8px; padding:7px; border:2px solid #665b4d; border-radius:3px; background:#ddd3c2; color:#201d19; text-align:center; }
 .sw25-side-initiative.phase-players { border-color:#2f668a; }
 .sw25-side-initiative.phase-monsters { border-color:#8a382f; }
 .sw25-side-initiative h3,.sw25-side-initiative p { margin:2px 0 5px; }
 .sw25-side-initiative button { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; margin:2px 0 0; }
 .sw25-side-initiative button i { margin:0; }
+.sw25-recovery-power-table { display:grid; grid-template-columns:repeat(10,minmax(24px,1fr)); margin:6px 0; border:1px solid #665b4d; text-align:center; }
+.sw25-recovery-power-table span { padding:3px 1px; border-right:1px solid #998b77; font-size:11px; line-height:1.2; }
+.sw25-recovery-power-table span:last-child { border-right:0; }
+.sw25-recovery-result button,[data-sw25-chat-action="roll-recovery-item"] { display:flex; align-items:center; justify-content:center; gap:5px; width:100%; }
+.sw25-natural-power-tracker { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin:5px 0; padding:5px; border:1px solid #766b5d; background:#eee7da; text-align:center; }
+.sw25-natural-power-tracker strong { grid-column:1 / -1; }
 .sw25-side-launcher { padding:4px 8px; background:transparent; border:0; }
 .sw25-side-turn-content { padding:10px; text-align:center; }
 .sw25-side-turn-content header { display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #665b4d; margin-bottom:8px; }

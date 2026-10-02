@@ -1,6 +1,7 @@
 <section class="sw25-side-turn-content phase-{{phase}}">
   {{#if active}}
     <header><h2>{{#if playerPhase}}Player Turn{{else}}Monster Turn{{/if}}</h2><span>Round {{round}}</span></header>
+    {{#each naturalPower as |resource|}}<div class="sw25-natural-power-tracker"><strong>{{resource.name}} — Natural Power</strong><span>Added {{resource.added}}</span><span>Spent {{resource.spent}}</span><span>Remaining {{resource.remaining}}</span></div>{{/each}}
     {{#if playerPhase}}
       <p class="sw25-side-progress"><strong>{{done}} / {{total}}</strong> players finished</p>
       {{#if canEndPlayer}}<button type="button" data-action="end-player-turn"><i class="fas fa-check"></i> End My Turn</button>{{else}}<p class="sw25-side-waiting">Waiting for the remaining players.</p>{{/if}}

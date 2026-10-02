@@ -24,9 +24,10 @@
           </div>
           <div class="paper-subbox xp-strip">
             <label>Experience Points<input type="number" name="system.xp.total" value="{{system.xp.total}}"></label>
-            <span>Spent {{calculated.spentXP}}</span><span>Remaining {{calculated.remainingXP}}</span>
+            <label>Automatic Failures<input type="number" name="system.automaticFailureCount" value="{{automaticFailureCount}}" min="0" data-action="edit-automatic-failures"></label>
+            <span>Spent XP {{calculated.spentXP}}</span><span>Remaining XP {{calculated.remainingXP}}</span>
           </div>
-          <div class="automatic-feats"><span>Automatic Failures</span>{{#each automaticFeatureSlots as |slot|}}<input type="checkbox" data-action="toggle-automatic-failure" data-index="{{slot.index}}" {{checked slot.checked}}>{{/each}}<span class="adventurer-label">Adventurer Level</span><strong class="adventurer-orb" title="Adventurer Level">{{calculated.adventurerLevel}}</strong></div>
+          <div class="automatic-feats"><span class="adventurer-label">Adventurer Level</span><strong class="adventurer-orb" title="Adventurer Level">{{calculated.adventurerLevel}}</strong></div>
         </section>
 
         <section class="portrait-column">
@@ -38,7 +39,7 @@
         </section>
 
         <section class="paper-panel biography-box">
-          <h2>Character Biography</h2>
+          <h2>Biography</h2>
           <div class="bio-triple">
             <label class="race-field"><span>Race</span><span class="inline-edit"><input type="text" data-action="edit-race-name" value="{{race.name}}" placeholder="Race"><button type="button" class="mini-plus" data-action="import-race" title="Import race"><i class="fas fa-file-import"></i></button></span></label>
             <label><span>Age</span><input type="text" name="system.biography.age" value="{{system.biography.age}}"></label>
@@ -69,6 +70,7 @@
             <h3>Spirit <small>Ability Score Bonus {{calculated.bonuses.spirit}}</small></h3>
             {{#each skillsByAbility.spirit as |skill|}}<div class="skill-line"><button type="button" class="skill-name-roll" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.name}}</button><span>{{skill.time}}</span><select data-action="select-skill-class" data-skill-key="{{skill.key}}">{{#each skill.options as |option|}}<option value="{{option.value}}" {{#if option.selected}}selected{{/if}}>{{option.label}}</option>{{/each}}</select><span>{{skill.level}}</span><button type="button" data-action="roll-skill" data-mod="{{skill.mod}}">{{skill.mod}}</button></div>{{/each}}
           </div>
+          <small class="skill-footnote">* Rangers may only apply these modifiers in Natural Environments.</small>
         </section>
 
         <section class="paper-panel ability-score-box">
@@ -100,7 +102,7 @@
           <h3>Consumables</h3>
           <div class="inventory-lines consumable-lines">{{#each consumables as |item|}}<div data-item-id="{{item.id}}"><button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button><input type="number" value="{{item.system.quantity}}" disabled><span class="inventory-actions"><button type="button" data-action="post-item" title="Post item to chat"><i class="fas fa-comment"></i></button><button type="button" class="row-delete inventory-delete" data-action="delete-item" title="Delete consumable"><i class="fas fa-trash"></i></button></span></div>{{else}}<p class="paper-empty">No consumables</p>{{/each}}</div>
           <h3>Money / Debt</h3>
-          <label class="money-line"><span>Gamels <strong>{{system.currency.gamels}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="gamels" placeholder="+/- amount"></label>
+          <label class="money-line"><span>Gumells <strong>{{system.currency.gamels}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="gamels" placeholder="+/- amount"></label>
           <label class="money-line"><span>Debt <strong>{{system.currency.debt}}</strong></span><input type="text" inputmode="numeric" data-action="adjust-currency" data-currency="debt" placeholder="+/- amount"></label>
         </section>
 
@@ -111,13 +113,14 @@
     <div class="sheet-tab" data-tab-panel="combat">
       <div class="official-page official-page-two">
         <section class="paper-panel special-box"><h2>Special Combat Modifiers</h2><div class="special-grid">
-<label><span>Sage Level</span><input type="number" value="{{calculated.sageLevel}}" min="0" disabled title="Automatically taken from the Sage class level"></label>
-<button type="button" data-action="roll-check" data-check="monsterKnowledge"><span>Monster Knowledge</span><strong>{{calculated.monsterKnowledge}}</strong></button>
-<label><span>Scout Level</span><input type="number" value="{{calculated.scoutLevel}}" min="0" disabled title="Automatically taken from the Scout class level"></label>
-<button type="button" data-action="roll-check" data-check="initiative"><span>Initiative</span><strong>{{calculated.initiative}}</strong></button>
+<label><span>Sage / Rider Level</span><input type="number" value="{{calculated.monsterKnowledgeClassLevel}}" min="0" disabled title="Automatically uses the higher Sage or Rider class level"></label>
+<div class="special-check-control"><button type="button" data-action="roll-check" data-check="monsterKnowledge"><span>Monster Knowledge</span><strong>{{calculated.monsterKnowledge}}</strong></button><label><span>Bonus</span><input type="number" name="system.combat.monsterKnowledgeBonus" value="{{calculated.monsterKnowledgeBonus}}"></label></div>
+<label><span>Scout / Tactician Level</span><input type="number" value="{{calculated.initiativeClassLevel}}" min="0" disabled title="Automatically uses the higher Scout or Tactician class level"></label>
+<div class="special-check-control"><button type="button" data-action="roll-check" data-check="initiative"><span>Initiative</span><strong>{{calculated.initiative}}</strong></button><label><span>Bonus</span><input type="number" name="system.combat.initiativeBonus" value="{{calculated.initiativeBonus}}"></label></div>
 </div></section>
-        <section class="paper-panel movement-box"><h2>Movement</h2><div class="movement-track"><label>Limited Move<input type="number" value="3" disabled></label><label>Normal Move<input type="number" name="system.combat.movement" value="{{system.combat.movement}}"></label><label>Full Move<input type="number" value="{{calculated.fullMove}}" disabled></label></div><input type="text" name="system.combat.movementEnhancements" value="{{system.combat.movementEnhancements}}" placeholder="Movement enhancements"></section>
+        <section class="paper-panel movement-box"><h2>Movement</h2><div class="movement-track"><label>Limited Move<input type="number" value="3" disabled></label><label>Normal Move <small>(Agility Score)</small><input type="number" value="{{calculated.normalMove}}" disabled></label><label>Full Move<input type="number" value="{{calculated.fullMove}}" disabled></label></div><input type="text" name="system.combat.movementEnhancements" value="{{system.combat.movementEnhancements}}" placeholder="Movement enhancements"></section>
         <section class="paper-panel hp-box">
+          <button type="button" class="death-check-button" data-action="roll-death-check" title="Roll Death Check" aria-label="Roll Death Check"><i class="fas fa-skull-crossbones"></i></button>
           <div class="resource-heart">
             <div class="resource-heart-inner">
               <div class="resource-title">HP</div>
@@ -125,7 +128,7 @@
               <div class="resource-value-line">
                 <input class="resource-current" type="number" name="system.hp.value" value="{{system.hp.value}}" aria-label="Current HP">
                 <span class="resource-divider">/</span>
-                <input class="resource-max" type="number" name="system.hp.max" value="{{calculated.hpMax}}" aria-label="Maximum HP">
+                <input class="resource-max" type="number" name="system.hp.max" value="{{calculated.hpMax}}" aria-label="Maximum HP" readonly>
               </div>
               <div class="resource-max-caption">MAX HP</div>
             </div>

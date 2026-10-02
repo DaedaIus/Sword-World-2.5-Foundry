@@ -2,10 +2,10 @@ const SOCKET = "system.sword-world-25";
 
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 
-export function damageApplicationButton(total, damageType = "physical") {
+export function damageApplicationButton(total, damageType = "physical", includeHalf = true) {
   const type = damageType === "magical" ? "magical" : "physical";
   const label = type === "magical" ? "Magical" : "Physical";
-  return `<div class="sw25-damage-actions"><button type="button" class="sw25-apply-damage" data-sw25-chat-action="apply-damage" data-damage="${Number(total) || 0}" data-damage-type="${type}" data-damage-factor="1"><i class="fas fa-heart-broken"></i> Apply ${label} Damage</button><button type="button" class="sw25-apply-damage" data-sw25-chat-action="apply-damage" data-damage="${Number(total) || 0}" data-damage-type="${type}" data-damage-factor="0.5"><i class="fas fa-divide"></i> Apply Half Damage</button></div>`;
+  return `<div class="sw25-damage-actions"><button type="button" class="sw25-apply-damage" data-sw25-chat-action="apply-damage" data-damage="${Number(total) || 0}" data-damage-type="${type}" data-damage-factor="1"><i class="fas fa-heart-broken"></i> Apply ${label} Damage</button>${includeHalf ? `<button type="button" class="sw25-apply-damage" data-sw25-chat-action="apply-damage" data-damage="${Number(total) || 0}" data-damage-type="${type}" data-damage-factor="0.5"><i class="fas fa-divide"></i> Apply Half Damage</button>` : ""}</div>`;
 }
 
 function defenseFor(actor, damageType) {
@@ -31,7 +31,7 @@ async function applyDamage({ actor, total, damageType, factor = 1 }) {
     await actor.update({ "system.combatStyles": styles });
   } else {
     const current = Number(actor.system.hp?.value ?? 0);
-    await actor.update({ "system.hp.value": Math.max(0, current - applied) });
+    await actor.update({ "system.hp.value": current - applied });
   }
   await ChatMessage.create({
     content: `<div class="sw25-chat-card"><h3>Damage Applied to ${escape(actor.name)}</h3><p><strong>Damage Applied:</strong> ${applied}</p></div>`
@@ -39,10 +39,10 @@ async function applyDamage({ actor, total, damageType, factor = 1 }) {
 }
 
 async function requestDamage(button) {
-  const targets = [...game.user.targets];
-  if (targets.length !== 1) return ui.notifications.warn("Target exactly one token before applying damage.");
-  const actor = targets[0].actor;
-  if (!actor) return ui.notifications.warn("The targeted token has no actor.");
+  const selected = [...(canvas?.tokens?.controlled || [])];
+  if (selected.length !== 1) return ui.notifications.warn("Select exactly one token before applying damage.");
+  const actor = selected[0].actor;
+  if (!actor) return ui.notifications.warn("The selected token has no actor.");
   const payload = {
     action:"apply-damage",
     actorUuid:actor.uuid,

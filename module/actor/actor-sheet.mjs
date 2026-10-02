@@ -1,6 +1,13 @@
 import { abilityBonus, isGunWeapon, isWarriorClass } from "../rules/weapon-damage.mjs";
 import { resolveAttackingClass, rollWeaponDamage } from "../rules/weapon-roll.mjs";
-import { recordPlayerInitiative } from "../combat/side-initiative.mjs";
+import { playerInitiativeModifier, recordPlayerInitiative } from "../combat/side-initiative.mjs";
+import { isDoubleStomp, isNaturalPower, rememberMagicPowerRoll, rollDoubleStompDamage, rollNaturalPower, rollSpecialSpellDamage, specialDamageBands, trackNaturalPowerSpending } from "../rules/spell-damage.mjs";
+import { isExhaustiveSucking, regenerationSpellData, requestRegenerationSpell, resolveExhaustiveSucking } from "../rules/spell-effects.mjs";
+import { rollDeathCheck } from "../rules/death-check.mjs";
+import { criticalFailureHTML, markCriticalFailure } from "../rules/critical-failure.mjs";
+import { recoveryPowerTableHTML } from "../rules/recovery-items.mjs";
+import { characterHPMaximum } from "../rules/resources.mjs";
+import { featureDefenseModifier } from "../rules/feature-defense.mjs";
 
 export class SW25ActorSheet extends ActorSheet {
   static get defaultOptions() {
@@ -162,16 +169,21 @@ export class SW25ActorSheet extends ActorSheet {
       remainingXP: totalXP - spentXP,
       abilities,
       bonuses,
-      fullMove: Number(system.combat?.movement ?? 0) * 3
+      normalMove: abilities.agility,
+      fullMove: abilities.agility * 3
     };
 
-    const classLevel = name => Number(context.classes.find(item => item.name.toLowerCase() === name.toLowerCase())?.system.level ?? 0);
+    const classLevel = (...names) => context.classes
+      .filter(item => names.some(name => item.name.toLowerCase() === name.toLowerCase()))
+      .reduce((highest, item) => Math.max(highest, Number(item.system.level ?? 0)), 0);
     context.classLevels = {
       fighter: classLevel("Fighter"),
       fencer: classLevel("Fencer"),
-      martialArtist: classLevel("Martial Artist"),
+      martialArtist: classLevel("Martial Artist", "Grappler"),
       marksman: classLevel("Marksman"),
       scout: classLevel("Scout"),
+      tactician: classLevel("Tactician"),
+      rider: classLevel("Rider"),
       sage: classLevel("Sage")
     };
 
@@ -193,19 +205,39 @@ export class SW25ActorSheet extends ActorSheet {
     }));
     const selectedClassLevel = id => Number(this.actor.items.get(id)?.system.level ?? 0);
     const adventurer = context.calculated.adventurerLevel;
-    const formulaHP = adventurer * 3 + abilities.vitality;
-    context.calculated.hpMax = Number(system.hp?.max ?? 0) || formulaHP;
+    const formulaHP = characterHPMaximum(system, context.classes);
+    context.calculated.hpMax = formulaHP;
+    if (this.actor.isOwner && Number(system.hp?.max ?? 0) !== formulaHP) {
+      await this.actor.update({ "system.hp.max":formulaHP }, { render:false });
+    }
     context.calculated.mpMax = context.classes
       .filter(item => /wizard/i.test(String(item.system.classType ?? "")))
       .reduce((sum, item) => sum + Number(item.system.level ?? 0) * 3, 0) + abilities.spirit;
     context.calculated.sageLevel = context.classLevels.sage;
+    context.calculated.riderLevel = context.classLevels.rider;
+    context.calculated.monsterKnowledgeClassLevel = Math.max(context.calculated.sageLevel, context.calculated.riderLevel);
     context.calculated.scoutLevel = context.classLevels.scout;
-    context.calculated.monsterKnowledge = context.calculated.sageLevel + bonuses.intelligence;
-    context.calculated.initiative = context.calculated.scoutLevel + bonuses.agility;
+    context.calculated.tacticianLevel = context.classLevels.tactician;
+    context.calculated.initiativeClassLevel = Math.max(context.calculated.scoutLevel, context.calculated.tacticianLevel);
+    context.calculated.monsterKnowledgeBonus = Number(system.combat?.monsterKnowledgeBonus ?? 0);
+    context.calculated.initiativeBonus = Number(system.combat?.initiativeBonus ?? 0);
+    context.calculated.monsterKnowledge = (
+      context.calculated.monsterKnowledgeClassLevel > 0
+        ? context.calculated.monsterKnowledgeClassLevel + bonuses.intelligence
+        : 0
+    ) + context.calculated.monsterKnowledgeBonus;
+    context.calculated.initiative = playerInitiativeModifier(
+      context.calculated.scoutLevel,
+      context.calculated.tacticianLevel,
+      bonuses.agility,
+      context.calculated.initiativeBonus
+    );
     context.calculated.fortitude = adventurer + bonuses.vitality;
     context.calculated.willpower = adventurer + bonuses.spirit;
     const equippedArmour = context.armour.filter(item => item.system.equipped);
-    context.calculated.defense = equippedArmour.reduce((sum,item)=>sum+Number(item.system.defence ?? 0),0);
+    const defensiveFeatures = [...context.feats, ...context.racialAbilities, ...context.classAbilities];
+    context.calculated.featureDefense = defensiveFeatures.reduce((sum, item) => sum + featureDefenseModifier(item), 0);
+    context.calculated.defense = equippedArmour.reduce((sum,item)=>sum+Number(item.system.defence ?? 0),0) + context.calculated.featureDefense;
     context.calculated.magicalDefense = equippedArmour.reduce((sum,item)=>sum+Number(item.system.magicalDefence ?? 0),0);
     context.calculated.armourEvasion = equippedArmour.reduce((sum,item)=>sum+Number(item.system.evasion ?? 0),0);
     context.calculated.defenseClassLevel = selectedClassLevel(system.combat?.defenseClassId);
@@ -287,7 +319,10 @@ export class SW25ActorSheet extends ActorSheet {
       ...context.armour
     ].filter(item => !item.system.consumable);
     const automaticFailures = Array.isArray(system.automaticFailures) ? system.automaticFailures : [];
-    context.automaticFeatureSlots = Array.from({ length: 10 }, (_, index) => ({ index, checked: Boolean(automaticFailures[index]) }));
+    const legacyAutomaticFailureCount = automaticFailures.filter(Boolean).length;
+    context.automaticFailureCount = automaticFailures.length
+      ? Math.max(Number(system.automaticFailureCount ?? 0) || 0, legacyAutomaticFailureCount)
+      : Number(system.automaticFailureCount ?? 0) || 0;
     const workSkills = Array.isArray(system.workSkills) ? system.workSkills : [];
     context.workSkills = workSkills.map((skill, skillIndex) => ({
       ...skill,
@@ -305,7 +340,7 @@ export class SW25ActorSheet extends ActorSheet {
       }))
     }));
 
-    const genericSkill = (name, time, ability, fixedClassName = "", fixedLevel = "") => {
+    const genericSkill = (name, time, ability, fixedClassName = "", fixedLevel = "", displayName = name) => {
       const key = name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + ability;
       const savedClassId = system.skillClasses?.[key];
       const classId = savedClassId !== undefined ? String(savedClassId) : (fixedClassName === "Adventurer" ? "adventurer" : "");
@@ -314,21 +349,21 @@ export class SW25ActorSheet extends ActorSheet {
       const level = workSkill ? Number(workSkill.level ?? 0) : (classId === "adventurer" ? context.calculated.adventurerLevel : selectedClassLevel(classId));
       const options = [{value:"",label:"—",selected:!classId},{value:"adventurer",label:"Adventurer",selected:classId==="adventurer"}, ...context.classes.map(item=>({value:item.id,label:item.name,selected:item.id===classId})), ...workSkills.map(skill=>({value:`work:${skill.id}`,label:`Work: ${skill.name}`,selected:`work:${skill.id}`===classId}))];
       const effectiveLevel = savedClassId !== undefined ? level : (fixedLevel || level);
-      return { name, time, ability, key, classId, level: effectiveLevel, mod: Number(bonuses[ability] ?? 0) + Number(effectiveLevel), options };
+      return { name: displayName, time, ability, key, classId, level: effectiveLevel, mod: Number(bonuses[ability] ?? 0) + Number(effectiveLevel), options };
     };
     context.skillsByAbility = {
       dexterity: [
         genericSkill("Concealment", "1 min", "dexterity"),
-        genericSkill("Disable", "1 min", "dexterity"),
-        genericSkill("Disguise", "1 min", "dexterity"),
+        genericSkill("Disable", "1 min", "dexterity", "", "", "Disable*"),
+        genericSkill("Disguise", "10 min", "dexterity"),
         genericSkill("First Aid", "10 min", "dexterity"),
         genericSkill("Pickpocket", "10 sec", "dexterity"),
-        genericSkill("Set Trap", "10 min", "dexterity")
+        genericSkill("Set Trap", "10 min", "dexterity", "", "", "Set Trap*")
       ],
       agility: [
         genericSkill("Acrobatics", "1 min", "agility"),
-        genericSkill("Climb", "10 min", "agility"),
-        genericSkill("Follow", "1 min", "agility"),
+        genericSkill("Climb", "1 min", "agility"),
+        genericSkill("Follow", "10 min", "agility"),
         genericSkill("Stealth", "1 min", "agility"),
         genericSkill("Jump", "10 sec", "agility", "Adventurer", context.calculated.adventurerLevel),
         genericSkill("Ride", "1 min", "agility", "Adventurer", context.calculated.adventurerLevel),
@@ -337,28 +372,28 @@ export class SW25ActorSheet extends ActorSheet {
         genericSkill("Tumble", "Instant", "agility")
       ],
       strength: [
-        genericSkill("Climb", "10 min", "strength", "Adventurer", context.calculated.adventurerLevel),
-        genericSkill("Strength", "10 min", "strength", "Adventurer", context.calculated.adventurerLevel)
+        genericSkill("Climb", "1 min", "strength", "Adventurer", context.calculated.adventurerLevel),
+        genericSkill("Strength", "10 sec", "strength", "Adventurer", context.calculated.adventurerLevel)
       ],
       intelligence: [
         genericSkill("Appraisal", "10 min", "intelligence"),
         genericSkill("Archaeology", "10 min", "intelligence"),
-        genericSkill("Cartography", "10 min", "intelligence"),
-        genericSkill("Evade Trap", "Instant", "intelligence"),
+        genericSkill("Cartography", "10 min", "intelligence", "", "", "Cartography*"),
+        genericSkill("Evade Trap", "Instant", "intelligence", "", "", "Evade Trap*"),
         genericSkill("Evocation", "Instant", "intelligence"),
-        genericSkill("Herbology", "Instant", "intelligence"),
+        genericSkill("Herbology", "1 min", "intelligence"),
         genericSkill("Insight", "10 sec", "intelligence", "Adventurer", context.calculated.adventurerLevel),
         genericSkill("Investigation", "1 hour", "intelligence"),
         genericSkill("Knowledge", "Instant", "intelligence"),
         genericSkill("Listen", "10 sec", "intelligence"),
         genericSkill("Medicine", "10 min", "intelligence"),
-        genericSkill("Perception", "Instant", "intelligence"),
+        genericSkill("Perception", "Instant", "intelligence", "", "", "Perception*"),
         genericSkill("Reference", "10 min", "intelligence"),
-        genericSkill("Search", "10 min", "intelligence"),
+        genericSkill("Search", "10 min", "intelligence", "", "", "Search*"),
         genericSkill("Sense Danger", "Instant", "intelligence"),
         genericSkill("Track", "1 min", "intelligence"),
         genericSkill("Weakness", "Instant", "intelligence"),
-        genericSkill("Weather", "10 min", "intelligence")
+        genericSkill("Weather", "1 min", "intelligence")
       ],
       spirit: [genericSkill("Performance", "Instant", "spirit")]
     };
@@ -402,6 +437,11 @@ export class SW25ActorSheet extends ActorSheet {
       const nextMP = Math.min(mpMax, currentMP + mpRecovered);
       await this.actor.update({ "system.hp.value":nextHP, "system.mp.value":nextMP });
       ui.notifications.info(`${this.actor.name} completes a ${hours}-hour rest and recovers ${Math.max(0, nextHP - currentHP)} HP and ${Math.max(0, nextMP - currentMP)} MP.`);
+    });
+
+    html.find("[data-action='roll-death-check']").on("click", event => {
+      event.preventDefault();
+      return rollDeathCheck(this.actor);
     });
 
     html.find("[data-action='toggle-race']").on("click", event => {
@@ -548,7 +588,8 @@ export class SW25ActorSheet extends ActorSheet {
       if (!skill || !check) return;
       const modifier = Number(skill.level ?? 0) + Number(this._sheetCalculated?.bonuses?.[check.ability] ?? 0);
       const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
-      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${skill.name}: ${check.name} (${check.time || "Instant"})` });
+      const criticalFailure = await markCriticalFailure(this.actor, roll);
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${skill.name}: ${check.name} (${check.time || "Instant"})${criticalFailure ? criticalFailureHTML() : ""}` });
     });
 
     html.find("[data-action='edit-language']").on("change", async event => {
@@ -558,6 +599,11 @@ export class SW25ActorSheet extends ActorSheet {
       if (!list[index]) return;
       list[index][field] = event.currentTarget.type === "checkbox" ? event.currentTarget.checked : String(event.currentTarget.value || "");
       await this.actor.update({"system.languages": list, "system.languagesInitialized": true});
+    });
+
+    html.find("[data-action='edit-automatic-failures']").on("change", async event => {
+      const count = Math.max(0, Number(event.currentTarget.value) || 0);
+      await this.actor.update({ "system.automaticFailureCount":count, "system.automaticFailures":[] });
     });
 
     html.find("[data-action='adjust-currency']").on("change", async event => {
@@ -583,14 +629,6 @@ export class SW25ActorSheet extends ActorSheet {
       if (index < 0 || index >= list.length) return;
       list.splice(index, 1);
       await this.actor.update({"system.languages": list, "system.languagesInitialized": true});
-    });
-
-    html.find("[data-action='toggle-automatic-failure']").on("change", async event => {
-      const index = Number(event.currentTarget.dataset.index);
-      const list = foundry.utils.deepClone(Array.isArray(this.actor.system.automaticFailures) ? this.actor.system.automaticFailures : []);
-      while (list.length < 10) list.push(false);
-      list[index] = Boolean(event.currentTarget.checked);
-      await this.actor.update({"system.automaticFailures": list});
     });
 
     html.find("[data-action='select-skill-class']").on("change", async event => {
@@ -657,9 +695,10 @@ export class SW25ActorSheet extends ActorSheet {
       const featDetails = item.type === "feat"
         ? `<p><strong>Prerequisite:</strong> ${escape(item.system.prerequisite || "—")} &nbsp; <strong>Use:</strong> ${escape(item.system.use || "—")}</p>`
         : `<p><strong>Type:</strong> ${escape(item.type)} &nbsp; <strong>Quantity:</strong> ${Math.max(0, Number(item.system.quantity ?? 1))}</p>`;
+      const recoveryControls = recoveryPowerTableHTML(item, this.actor);
       await ChatMessage.create({
         speaker:ChatMessage.getSpeaker({ actor:this.actor }),
-        content:`<div class="sw25-chat-card"><h3>${escape(item.name)}</h3>${featDetails}${description ? `<p>${escape(description)}</p>` : ""}</div>`
+        content:`<div class="sw25-chat-card"><h3>${escape(item.name)}</h3>${featDetails}${description ? `<p>${escape(description)}</p>` : ""}${recoveryControls}</div>`
       });
     });
 
@@ -694,7 +733,8 @@ export class SW25ActorSheet extends ActorSheet {
       const modifier = Number(event.currentTarget.dataset.mod ?? 0);
       const skillName = event.currentTarget.closest(".skill-line")?.querySelector(".skill-name-roll")?.textContent?.trim() || "Skill";
       const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
-      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${skillName} Check` });
+      const criticalFailure = await markCriticalFailure(this.actor, roll);
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${skillName} Check${criticalFailure ? criticalFailureHTML() : ""}` });
     });
 
     html.find("[data-action='roll-check']").on("click", async event => {
@@ -716,10 +756,12 @@ export class SW25ActorSheet extends ActorSheet {
       };
       const modifier = Number(dynamic[check] ?? this.actor.system.combat?.[check] ?? 0);
       const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
+      const criticalFailure = await markCriticalFailure(this.actor, roll);
       await roll.toMessage({
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        flavor: labels[check] ?? "Check"
+        flavor: `${labels[check] ?? "Check"}${criticalFailure ? criticalFailureHTML() : ""}`
       });
+      if (check === "magicPower") await rememberMagicPowerRoll(this.actor, roll, this.actor.system.combat?.magicClassId || "");
       if (check === "initiative") await recordPlayerInitiative(this.actor, roll.total);
     });
 
@@ -729,7 +771,9 @@ export class SW25ActorSheet extends ActorSheet {
       if (!classItem) return ui.notifications.warn("The casting class could not be found.");
       const modifier = this._classLevel(classItem) + abilityBonus(this.actor.system, "intelligence");
       const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
-      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${classItem.name} Magic Power` });
+      const criticalFailure = await markCriticalFailure(this.actor, roll);
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${classItem.name} Magic Power${criticalFailure ? criticalFailureHTML() : ""}` });
+      await rememberMagicPowerRoll(this.actor, roll, classItem.id);
     });
 
     html.find("[data-action='post-weapon']").on("click", async event => {
@@ -764,14 +808,41 @@ export class SW25ActorSheet extends ActorSheet {
       ) || this.actor.items.get(this.actor.system.combat?.magicClassId);
       if (!castingClass) return ui.notifications.warn(`${spell.name} is not assigned to a casting class.`);
 
+      const doubleStomp = isDoubleStomp(spell);
+      const doubleStompTargets = doubleStomp ? [...game.user.targets] : [];
+      if (doubleStomp && (doubleStompTargets.length !== 2 || doubleStompTargets.some(token => !token.actor))) {
+        return ui.notifications.warn("Target exactly two characters before casting Double Stomp.");
+      }
+
+      const regenerationSpell = regenerationSpellData(spell);
+      const selectedTargets = regenerationSpell ? [...game.user.targets] : [];
+      if (regenerationSpell && selectedTargets.length !== 1) return ui.notifications.warn(`Target exactly one character before casting ${spell.name}.`);
+      const regenerationTarget = selectedTargets[0]?.actor;
+      if (regenerationSpell && regenerationTarget?.type !== "character") return ui.notifications.warn(`${spell.name} requires a character target.`);
+      const targetInCombat = regenerationSpell && [...(game.combat?.combatants || [])].some(combatant => combatant.actor?.uuid === regenerationTarget.uuid || combatant.actor?.id === regenerationTarget.id);
+      if (regenerationSpell && !targetInCombat) return ui.notifications.warn(`The ${spell.name} target must be in the active combat encounter.`);
+      if (regenerationSpell && !regenerationTarget.isOwner && !game.users.activeGM) return ui.notifications.error("An active GM is required to affect that target.");
+
+      const hasSpecialDamage = specialDamageBands(spell).length > 0;
+      const exhaustiveSucking = isExhaustiveSucking(spell);
+      const needsPreviousMagicPower = hasSpecialDamage || exhaustiveSucking;
+      const previousMagicPower = needsPreviousMagicPower ? this.actor.getFlag("sword-world-25", "lastMagicPowerRoll") : null;
+      if (needsPreviousMagicPower && (!previousMagicPower || previousMagicPower.criticalFailure || (previousMagicPower.classId && String(previousMagicPower.classId) !== String(castingClass.id)))) {
+        return ui.notifications.warn(`Roll ${castingClass.name} Magic Power before casting ${spell.name}.`);
+      }
+
       const cost = Math.max(0, Number(spell.system.mpCost ?? 0));
       const currentMP = Number(this.actor.system.mp?.value ?? 0);
       if (currentMP < cost) return ui.notifications.warn(`${this.actor.name} does not have enough MP to cast ${spell.name}.`);
-      if (this.isEditable) await this.actor.update({ "system.mp.value": currentMP - cost });
+      if (this.isEditable) {
+        await this.actor.update({ "system.mp.value": currentMP - cost });
+        await trackNaturalPowerSpending(this.actor, cost, spell);
+      }
 
       const escape = value => foundry.utils.escapeHTML(String(value || "")).replace(/\n/g, "<br>");
       const magicPower = this._classLevel(castingClass) + abilityBonus(this.actor.system, "intelligence");
-      const powerResult = spell.system.hasPowerTable
+      const naturalPower = isNaturalPower(spell);
+      const powerResult = spell.system.hasPowerTable && !naturalPower
         ? `<button type="button" data-sw25-chat-action="roll-spell-damage" data-actor-id="${this.actor.id}" data-item-id="${spell.id}" data-class-id="${castingClass.id}"><i class="fas fa-dice-d6"></i> Roll Damage</button>`
         : "";
 
@@ -779,6 +850,11 @@ export class SW25ActorSheet extends ActorSheet {
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
         content: `<div class="sw25-chat-card spell-card"><h3>${escape(spell.name)}</h3><p><strong>${escape(castingClass.name)} Magic Power:</strong> ${magicPower} &nbsp; <strong>MP:</strong> ${cost}</p>${spell.system.metadata ? `<p>${escape(spell.system.metadata)}</p>` : ""}${spell.system.description ? `<p>${escape(spell.system.description)}</p>` : ""}${powerResult}<p><em>${escape(this.actor.name)} spends ${cost} MP.</em></p></div>`
       });
+      if (hasSpecialDamage && !doubleStomp) await rollSpecialSpellDamage({ actor:this.actor, spell, castingClass });
+      if (doubleStomp) await rollDoubleStompDamage({ actor:this.actor, spell, castingClass, targets:doubleStompTargets });
+      if (naturalPower) await rollNaturalPower({ actor:this.actor, spell });
+      if (regenerationSpell) await requestRegenerationSpell({ target:regenerationTarget, caster:this.actor, spell });
+      if (exhaustiveSucking) await resolveExhaustiveSucking({ actor:this.actor, spell, castingClass });
     });
 
     html.find("[data-action='cast-spell-legacy']").on("click", async event => {
@@ -796,6 +872,7 @@ export class SW25ActorSheet extends ActorSheet {
 
       if (this.isEditable) {
         await this.actor.update({ "system.mp.value": currentMP - cost });
+        await trackNaturalPowerSpending(this.actor, cost, spell);
       }
 
       const description = foundry.utils.escapeHTML(spell.system.description || "").replace(/\n/g, "<br>");
@@ -1044,7 +1121,7 @@ export class SW25ActorSheet extends ActorSheet {
       const hpRoll = /d/.test(costText) ? await new Roll(rollFormula).evaluate() : null;
       const hpCost = hpRoll ? Number(hpRoll.total ?? 0) : Number(costText) || 0;
       const currentHP = Number(this.actor.system.hp?.value ?? 0);
-      updates["system.hp.value"] = Math.max(0, currentHP - hpCost);
+      updates["system.hp.value"] = currentHP - hpCost;
       notices.push(`${hpCost} HP spent${hpRoll ? ` (${costText})` : ""}`);
     }
 

@@ -51,6 +51,7 @@
       </label>
       <label>Prerequisite <input type="text" name="system.prerequisite" value="{{system.prerequisite}}"></label>
       <label>Use <input type="text" name="system.use" value="{{system.use}}"></label>
+      <label>Defense Modifier <input type="number" name="system.defenseModifier" value="{{system.defenseModifier}}"></label>
       <label class="wide-field">Summary <textarea name="system.summary">{{system.summary}}</textarea></label>
       <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
     {{/if}}
@@ -66,6 +67,7 @@
       <label>Feature Type <input type="text" name="system.featureType" value="{{system.featureType}}"></label>
       <label>Requirement <input type="text" name="system.requirement" value="{{system.requirement}}"></label>
       <label>Cost <input type="text" name="system.cost" value="{{system.cost}}"></label>
+      <label>Defense Modifier <input type="number" name="system.defenseModifier" value="{{system.defenseModifier}}"></label>
       <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
       <label class="wide-field">Imported Details <textarea name="system.metadata">{{system.metadata}}</textarea></label>
     {{/if}}
@@ -145,6 +147,13 @@
       <label>Base Price <input type="number" name="system.price" value="{{system.price}}" min="0"></label>
       <label>Listed Price <input type="text" name="system.priceText" value="{{system.priceText}}"></label>
       <label>Reputation Required <input type="number" name="system.reputationRequirement" value="{{system.reputationRequirement}}" min="0"></label>
+      <label class="checkbox-label"><input type="checkbox" name="system.hasPowerTable" {{checked system.hasPowerTable}}> Uses Power Table</label>
+      {{#if system.hasPowerTable}}
+      <label>Power <input type="number" name="system.power" value="{{system.power}}"></label>
+      <label>Critical <input type="number" name="system.critical" value="{{system.critical}}"></label>
+      <label>Additional Recovery <input type="number" name="system.additionalDamage" value="{{system.additionalDamage}}"></label>
+      <div class="wide-field weapon-power-table"><strong>Power Table</strong><div class="weapon-power-grid"><label>3<input type="number" name="system.powerTable.3" value="{{lookup system.powerTable "3"}}"></label><label>4<input type="number" name="system.powerTable.4" value="{{lookup system.powerTable "4"}}"></label><label>5<input type="number" name="system.powerTable.5" value="{{lookup system.powerTable "5"}}"></label><label>6<input type="number" name="system.powerTable.6" value="{{lookup system.powerTable "6"}}"></label><label>7<input type="number" name="system.powerTable.7" value="{{lookup system.powerTable "7"}}"></label><label>8<input type="number" name="system.powerTable.8" value="{{lookup system.powerTable "8"}}"></label><label>9<input type="number" name="system.powerTable.9" value="{{lookup system.powerTable "9"}}"></label><label>10<input type="number" name="system.powerTable.10" value="{{lookup system.powerTable "10"}}"></label><label>11<input type="number" name="system.powerTable.11" value="{{lookup system.powerTable "11"}}"></label><label>12<input type="number" name="system.powerTable.12" value="{{lookup system.powerTable "12"}}"></label></div></div>
+      {{/if}}
       <label class="wide-field">Notes <textarea name="system.notes">{{system.notes}}</textarea></label>
       <label class="wide-field">Source URL <input type="url" name="system.sourceUrl" value="{{system.sourceUrl}}"></label>
     {{/if}}

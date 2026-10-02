@@ -1,5 +1,6 @@
 import { isGunWeapon, isWarriorClass, weaponDamageParts } from "./weapon-damage.mjs";
 import { damageApplicationButton } from "../combat/damage-application.mjs";
+import { criticalFailureHTML, markCriticalFailure } from "./critical-failure.mjs";
 
 export function resolveAttackingClass(actor, weapon, requestedClassId = "") {
   if (isGunWeapon(weapon)) {
@@ -14,6 +15,14 @@ export function resolveAttackingClass(actor, weapon, requestedClassId = "") {
 export async function rollWeaponDamage({ actor, weapon, attackingClass, accumulatedPower = 0 }) {
   const roll = await new Roll("2d6").evaluate();
   const diceTotal = Number(roll.total) || 0;
+  const criticalFailure = await markCriticalFailure(actor, roll);
+  if (criticalFailure) {
+    await roll.toMessage({
+      speaker:ChatMessage.getSpeaker({ actor }),
+      flavor:`<div class="sw25-weapon-roll"><h3>${foundry.utils.escapeHTML(weapon.name)}</h3>${criticalFailureHTML()}<p>No damage is dealt.</p></div>`
+    });
+    return { criticalFailure:true, total:0 };
+  }
   const damage = weaponDamageParts({
     weapon,
     actorSystem: actor.system,

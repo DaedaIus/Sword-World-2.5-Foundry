@@ -1,6 +1,8 @@
 import { lootMatches, monsterDamageFormula } from "../importer/monster-parser.mjs";
 import { beginMonsterInitiative } from "../combat/side-initiative.mjs";
 import { damageApplicationButton } from "../combat/damage-application.mjs";
+import { staticAccuracy } from "../combat/evasion-challenge.mjs";
+import { criticalFailureHTML, markCriticalFailure } from "../rules/critical-failure.mjs";
 
 export class SW25MonsterSheet extends ActorSheet {
   static get defaultOptions() {
@@ -80,7 +82,22 @@ export class SW25MonsterSheet extends ActorSheet {
       if (!style) return;
       const modifier = Number(String(style.accuracy || "0").match(/-?\d+/)?.[0] || 0);
       const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
-      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${this.actor.name} — ${style.style || "Attack"} Accuracy` });
+      const criticalFailure = await markCriticalFailure(this.actor, roll);
+      await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${this.actor.name} — ${style.style || "Attack"} Accuracy${criticalFailure ? criticalFailureHTML() : ""}` });
+    });
+
+    html.find("[data-action='call-monster-evasion']").on("click", async event => {
+      event.preventDefault();
+      const style = this.actor.system.combatStyles?.[Number(event.currentTarget.dataset.index)];
+      if (!style) return;
+      const target = staticAccuracy(style.accuracy);
+      if (!Number.isFinite(target)) return ui.notifications.warn("This attack does not have a static Accuracy value in parentheses.");
+      const attackName = style.style || "Attack";
+      await ChatMessage.create({
+        speaker:ChatMessage.getSpeaker({ actor:this.actor }),
+        content:`<div class="sw25-chat-card sw25-evasion-challenge"><h3>${foundry.utils.escapeHTML(this.actor.name)} — ${foundry.utils.escapeHTML(attackName)}</h3><p>An Evasion Check is required.</p><button type="button" data-sw25-chat-action="roll-evasion-challenge"><i class="fas fa-shield-halved"></i> Roll Evasion</button></div>`,
+        flags:{ "sword-world-25":{ evasionChallenge:{ target, monsterName:this.actor.name, attackName } } }
+      });
     });
 
     html.find("[data-action='roll-monster-initiative']").on("click", async event => {
@@ -89,6 +106,31 @@ export class SW25MonsterSheet extends ActorSheet {
       const initiative = Number(this.actor.system.initiative ?? 0);
       await ChatMessage.create({ speaker:ChatMessage.getSpeaker({ actor:this.actor }), content:`<div class="sw25-chat-card"><h3>${foundry.utils.escapeHTML(this.actor.name)} Side Initiative</h3><p class="sw25-weapon-total"><strong>${initiative}</strong></p></div>` });
       await beginMonsterInitiative(this.actor, initiative);
+    });
+
+    html.find("[data-action='roll-monster-resistance']").on("click", async event => {
+      event.preventDefault();
+      const check = event.currentTarget.dataset.check;
+      const labels = { fortitude: "Fortitude", willpower: "Willpower" };
+      if (!labels[check]) return;
+      const rawValue = String(this.actor.system[check] ?? "0");
+      const modifier = Number(rawValue.match(/-?\d+/)?.[0] ?? 0);
+      const roll = await new Roll(`2d6 + ${modifier}`).evaluate();
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: `${this.actor.name} — ${labels[check]} Check`
+      });
+    });
+
+    html.find("[data-action='post-monster-skill']").on("click", async event => {
+      event.preventDefault();
+      const skill = this.actor.system.uniqueSkills?.[Number(event.currentTarget.dataset.index)];
+      if (!skill) return;
+      const escape = value => foundry.utils.escapeHTML(String(value || "")).replace(/\n/g, "<br>");
+      await ChatMessage.create({
+        speaker:ChatMessage.getSpeaker({ actor:this.actor }),
+        content:`<div class="sw25-chat-card monster-ability-card"><h3>${escape(skill.title || "Monster Ability")}</h3>${skill.description ? `<p>${escape(skill.description)}</p>` : ""}</div>`
+      });
     });
 
     html.find("[data-action='roll-monster-loot']").on("click", async event => {
