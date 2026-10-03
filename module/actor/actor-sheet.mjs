@@ -1214,7 +1214,7 @@ export class SW25ActorSheet extends ActorSheet {
 
   async _openRaceImportDialog() {
     const content = `<form><div class="form-group"><label>Race URL</label><input name="url" placeholder="http://sw25.wikidot.com/race:tabbit"></div></form>`;
-    new Dialog({title:"Import Race",content,buttons:{import:{label:"Import",callback:async h=>{const url=String(h.find('[name=url]').val()||'').trim(); if(url) await game.sw25.importer.importUrl(url,this.actor);}}}}).render(true);
+    new Dialog({title:"Import Race",content,buttons:{import:{label:"Import",callback:async h=>{const url=String(h.find('[name=url]').val()||'').trim(); if(url) await game.sw25.importer.importUrl(url,this.actor);}}},default:"import"}).render(true);
   }
 
   async _openArmourDialog() {

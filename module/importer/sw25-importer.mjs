@@ -271,14 +271,36 @@ export class SW25Importer {
   }
 
   static async fetchPage(url) {
-    // Wikidot does not expose CORS headers. Try several reader URL forms,
-    // because r.jina.ai has changed how it handles colons in Wikidot paths.
+    // Wikidot does not expose CORS headers. Fetch its original HTML through a
+    // CORS-aware proxy first so imports do not depend on Jina's browser-facing
+    // Cloudflare challenge. normalizeUrl restricts this to the SW25 wiki.
+    const proxyUrl = `https://proxy.cors.dev/${url}`;
     const targets = this.readerTargets(url);
 
     const errors = [];
+    try {
+      const response = await fetch(proxyUrl, {
+        credentials: "omit",
+        headers: { Accept: "text/html, text/plain;q=0.9" }
+      });
+      const text = await response.text();
+      if (!response.ok) throw new Error(`Proxy returned ${response.status}.`);
+      if (text.length < 150 || !/<(?:html|body|table|div)[\s>]/i.test(text)) {
+        throw new Error("Proxy returned an empty or invalid page.");
+      }
+      return { kind: "html", text, readerUrl: proxyUrl };
+    } catch (error) {
+      errors.push(`${proxyUrl}: ${error.message}`);
+    }
+
+    // Retain the reader variants as fallbacks for installations where the
+    // proxy is unavailable or a page needs Reader's Markdown conversion.
     for (const readerUrl of targets) {
       try {
-        const response = await fetch(readerUrl, { headers: { Accept: "text/plain, text/markdown, text/html" } });
+        const response = await fetch(readerUrl, {
+          credentials: "omit",
+          headers: { Accept: "text/plain, text/markdown, text/html" }
+        });
         const text = await response.text();
         if (!response.ok) throw new Error(`Reader returned ${response.status}.`);
         if (text.length < 150 || /^(?:internal server error|bad gateway|not found|forbidden)\s*$/i.test(text.trim())) {

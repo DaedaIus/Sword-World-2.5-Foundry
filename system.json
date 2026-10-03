@@ -2,7 +2,7 @@
   "id": "sword-world-25",
   "title": "Sword World 2.5",
   "description": "A Foundry VTT system for Sword World 2.5",
-  "version": "0.14.19",
+  "version": "0.14.20",
   "url": "https://github.com/DaedaIus/Sword-World-2.5-Foundry",
   "manifest": "https://raw.githubusercontent.com/DaedaIus/Sword-World-2.5-Foundry/main/system.json",
   "download": "https://github.com/DaedaIus/Sword-World-2.5-Foundry/releases/latest/download/sword-world-25.zip",
