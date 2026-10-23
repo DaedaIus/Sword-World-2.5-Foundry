@@ -24,6 +24,60 @@ export class SW25ActorSheet extends ActorSheet {
     return "systems/sword-world-25/templates/actor/character-sheet.hbs";
   }
 
+  async _onDropItemCreate(itemData, event) {
+    const dropped = Array.isArray(itemData) ? itemData : [itemData];
+    const created = [];
+
+    for (const data of dropped) {
+      if (data?.type !== "race" || this.actor.type !== "character") {
+        created.push(...await super._onDropItemCreate(data, event));
+        continue;
+      }
+
+      const importer = game.sw25?.importer;
+      if (!importer) throw new Error("The Sword World 2.5 importer is not available.");
+
+      const system = foundry.utils.deepClone(data.system || {});
+      const sourceUrl = String(system.sourceUrl || "").trim();
+      let race;
+
+      if (sourceUrl) {
+        try {
+          race = await importer.importUrl(sourceUrl, this.actor);
+        } catch (error) {
+          console.warn(`Could not refresh dropped race ${data.name} from ${sourceUrl}; using stored data.`, error);
+        }
+      }
+
+      if (!race) {
+        const rawText = String(system.rawText || "");
+        const abilitiesText = importer.extractRacialAbilitySection(rawText);
+        race = await importer.createRace({
+          name: String(data.name || "Imported Race"),
+          sourceUrl,
+          description: String(system.description || ""),
+          languages: String(system.languages || ""),
+          restrictedClasses: String(system.restrictedClasses || ""),
+          lifespan: String(system.lifespan || ""),
+          soulscars: Number(system.soulscars || 0),
+          corrections: system.corrections || {},
+          backgrounds: String(system.backgrounds || ""),
+          backgroundTables: rawText
+            ? importer.parseBackgroundTablesMarkdown(rawText, data.name)
+            : [],
+          rawText,
+          abilities: abilitiesText
+            ? importer.extractAbilities(abilitiesText)
+            : []
+        }, this.actor);
+      }
+
+      if (race) created.push(race);
+    }
+
+    return created;
+  }
+
   async getData(options = {}) {
     const context = await super.getData(options);
     context.actor = this.actor;
