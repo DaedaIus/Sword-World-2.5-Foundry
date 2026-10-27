@@ -16,7 +16,8 @@ export class SW25ActorSheet extends ActorSheet {
       width: 1120,
       height: 820,
       resizable: true,
-      scrollY: [".tab-content"]
+      scrollY: [".tab-content"],
+      dragDrop: [{ dragSelector:"[data-item-id]", dropSelector:".sw25-official-sheet" }]
     });
   }
 
@@ -28,6 +29,20 @@ export class SW25ActorSheet extends ActorSheet {
     const context = await super.getData(options);
     context.actor = this.actor;
     context.system = this.actor.system;
+
+    const savedSheetStyle = String(this.actor.getFlag("sword-world-25", "sheetStyle") ?? "paper").toLowerCase();
+    context.sheetStyle = ["paper", "adventurer"].includes(savedSheetStyle) ? savedSheetStyle : "paper";
+    context.isPaperStyle = context.sheetStyle === "paper";
+    context.isAdventurerStyle = context.sheetStyle === "adventurer";
+
+    const savedPortraitSource = String(this.actor.getFlag("sword-world-25", "portraitSource") ?? "portrait").toLowerCase();
+    context.portraitSource = savedPortraitSource === "token" ? "token" : "portrait";
+    context.usingTokenImage = context.portraitSource === "token";
+    context.profileImage = context.usingTokenImage
+      ? String(this.actor.prototypeToken?.texture?.src || this.actor.img)
+      : String(this.actor.img);
+    context.profileImagePath = context.usingTokenImage ? "prototypeToken.texture.src" : "img";
+    context.profileImageLabel = context.usingTokenImage ? "Token" : "Portrait";
 
     const soulscars = Number(this.actor.system.soulscars ?? 0);
     context.soulscarCircles = Array.from({ length: 5 }, (_, index) => ({
@@ -65,6 +80,26 @@ export class SW25ActorSheet extends ActorSheet {
     };
     context.favouriteSpellLevels = groupSpellsByLevel(context.favouriteSpells);
     context.equipment = byType("equipment");
+    const correctedClassName = name => /^abyss gaer$/i.test(String(name ?? "").trim()) ? "Abyss Gazer" : String(name ?? "");
+    const legacyClassUpdates = this.actor.isOwner ? [...this.actor.items].flatMap(item => {
+      const update = { _id:item.id };
+      let changed = false;
+      if (item.type === "class" && correctedClassName(item.name) !== item.name) {
+        update.name = correctedClassName(item.name);
+        changed = true;
+      }
+      for (const field of ["className", "school"]) {
+        const current = String(item.system?.[field] ?? "");
+        const corrected = correctedClassName(current);
+        if (corrected !== current) {
+          update[`system.${field}`] = corrected;
+          changed = true;
+        }
+      }
+      return changed ? [update] : [];
+    }) : [];
+    if (legacyClassUpdates.length) await this.actor.updateEmbeddedDocuments("Item", legacyClassUpdates, { render:false });
+    for (const item of context.classes) item.sheetDisplayName = correctedClassName(item.name);
     context.additionalItems = [...context.classAbilities, ...context.spells, ...context.feats];
     context.equippedGear = [...context.weapons, ...context.armour, ...context.equipment]
       .filter(item => item.system.equipped);
@@ -73,9 +108,9 @@ export class SW25ActorSheet extends ActorSheet {
     const system = this.actor.system;
 
     const classTypeForName = name => {
-      const key = String(name ?? "").trim().toLowerCase();
+      const key = String(name ?? "").trim().toLowerCase().replace(/^abyss gaer$/, "abyss gazer");
       const warriors = new Set(["battle dancer","fencer","fighter","martial artist","grappler","marksman"]);
-      const wizards = new Set(["abyss gaer","artificer","bibliomancer","conjurer","daemonologist","druid","fairy tamer","priest","sorcerer"]);
+      const wizards = new Set(["abyss gazer","artificer","bibliomancer","conjurer","daemonologist","druid","fairy tamer","priest","sorcerer"]);
       const others = new Set(["alchemist","bard","dark hunter","enhancer","geomancer","heritor","ranger","rider","sage","scout","tactician"]);
       if (warriors.has(key)) return "Warrior";
       if (wizards.has(key)) return "Wizard";
@@ -115,7 +150,8 @@ export class SW25ActorSheet extends ActorSheet {
     const excludedOtherTabs = new Set(["ranger", "sage", "scout"]);
     const importedFeatures = [...context.spells, ...context.classAbilities];
     context.classTabs = context.classes.flatMap(classItem => {
-      const nameKey = classItem.name.trim().toLowerCase();
+      const displayName = correctedClassName(classItem.name);
+      const nameKey = displayName.trim().toLowerCase();
       const type = String(classItem.displayClassType).trim().toLowerCase();
       if (type === "warrior" || (type === "other" && excludedOtherTabs.has(nameKey))) return [];
       let sections = type === "wizard" ? [{ key: "spell", label: "Spells", prefix: "spell:" }] : featureSections[nameKey];
@@ -123,11 +159,12 @@ export class SW25ActorSheet extends ActorSheet {
       if (!sections) return [];
       return [{
         id: `class-${classItem.id}`,
-        label: classItem.name,
+        label: displayName,
+        pageClass: `class-page-${nameKey.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
         sections: sections.map(section => ({
           ...section,
           classId: classItem.id,
-          className: classItem.name,
+          className: displayName,
           items: importedFeatures.filter(item =>
             (String(item.system.classId || "") === classItem.id ||
               (!item.system.classId && String(item.system.className || item.system.school || "").toLowerCase() === nameKey)) &&
@@ -187,7 +224,7 @@ export class SW25ActorSheet extends ActorSheet {
       sage: classLevel("Sage")
     };
 
-    context.classChoices = context.classes.map(item => ({ value: item.id, label: `${item.name} (Lv ${Number(item.system.level ?? 0)})` }));
+    context.classChoices = context.classes.map(item => ({ value: item.id, label: `${item.sheetDisplayName || item.name} (Lv ${Number(item.system.level ?? 0)})` }));
     context.defenseClassChoices = context.classChoices.map(c => ({...c, selected:c.value === String(system.combat?.defenseClassId ?? "")}));
     context.offenseClassChoices = context.classes
       .filter(isWarriorClass)
@@ -423,6 +460,18 @@ export class SW25ActorSheet extends ActorSheet {
       setActiveTab(event.currentTarget.dataset.tab);
     });
 
+    html.find("[data-action='set-sheet-style']").on("change", async event => {
+      const style = String(event.currentTarget.value || "paper").toLowerCase();
+      await this.actor.setFlag("sword-world-25", "sheetStyle", style === "adventurer" ? "adventurer" : "paper");
+      this.render(false);
+    });
+
+    html.find("[data-action='toggle-portrait-source']").on("change", async event => {
+      const source = event.currentTarget.checked ? "token" : "portrait";
+      await this.actor.setFlag("sword-world-25", "portraitSource", source);
+      this.render(false);
+    });
+
     html.find("[data-action='rest']").on("click", async event => {
       event.preventDefault();
       const hours = Number(event.currentTarget.dataset.hours);
@@ -461,6 +510,15 @@ export class SW25ActorSheet extends ActorSheet {
         featureType: button.dataset.featureType,
         featureLabel: button.dataset.featureLabel,
         prefix: button.dataset.prefix
+      });
+    });
+
+    html.find("[data-action='bulk-import-spells']").on("click", async event => {
+      event.preventDefault();
+      const button = event.currentTarget;
+      await game.sw25.importer.openSpellList(this.actor, {
+        classId:button.dataset.classId,
+        className:button.dataset.className
       });
     });
 
@@ -1248,6 +1306,41 @@ export class SW25ActorSheet extends ActorSheet {
   async _openAdditionalDialog() {
     const content = `<form><div class="form-group"><label>Type</label><select name="type"><option value="ability">Ability</option><option value="spell">Spell</option><option value="feat">Feat</option></select></div><div class="form-group"><label>Title</label><input name="name"></div><div class="form-group"><label>Description</label><textarea name="description"></textarea></div><hr><div class="form-group"><label>Import URL</label><input name="url" placeholder="http://sw25.wikidot.com/"></div></form>`;
     new Dialog({title:"Add Ability, Spell, or Feat",content,buttons:{manual:{label:"Add Manually",callback:async h=>{const type=String(h.find('[name=type]').val()); const system={description:String(h.find('[name=description]').val()||'')}; if(type==='ability') system.source='class'; await this.actor.createEmbeddedDocuments('Item',[{name:String(h.find('[name=name]').val()||'New Entry'),type,system}]);}},import:{label:"Import Link",callback:async h=>{const url=String(h.find('[name=url]').val()||'').trim(); if(!url) return; try { await game.sw25.importer.importUrl(url,this.actor); } catch (error) { console.error(error); ui.notifications.warn("This page type is not supported by the importer yet."); }}}}}).render(true);
+  }
+
+  async _onDropItem(event, data) {
+    const fromDropData = Item.implementation?.fromDropData ?? Item.fromDropData;
+    const source = await fromDropData.call(Item.implementation ?? Item, data);
+    if (!source) return super._onDropItem(event, data);
+    if (source.parent?.uuid === this.actor.uuid) return source;
+
+    let move = false;
+    if (source.parent?.documentName === "Actor") {
+      const choice = await new Promise(resolve => new Dialog({
+        title:`Trade ${source.name}`,
+        content:`<p>Transfer <strong>${foundry.utils.escapeHTML(source.name)}</strong> from <strong>${foundry.utils.escapeHTML(source.parent.name)}</strong> to <strong>${foundry.utils.escapeHTML(this.actor.name)}</strong>?</p>`,
+        buttons:{
+          move:{ icon:'<i class="fas fa-right-left"></i>', label:"Move", callback:()=>resolve("move") },
+          copy:{ icon:'<i class="fas fa-copy"></i>', label:"Copy", callback:()=>resolve("copy") },
+          cancel:{ label:"Cancel", callback:()=>resolve(null) }
+        },
+        default:"move",
+        close:()=>resolve(null)
+      }).render(true));
+      if (!choice) return null;
+      move = choice === "move";
+      if (move && !source.isOwner) {
+        ui.notifications.warn(`You cannot remove ${source.name} from ${source.parent.name}; it will be copied instead.`);
+        move = false;
+      }
+    }
+
+    const itemData = source.toObject();
+    delete itemData._id;
+    const [created] = await this.actor.createEmbeddedDocuments("Item", [itemData]);
+    if (move) await source.delete();
+    ui.notifications.info(`${source.name} was ${move ? "moved" : "copied"} to ${this.actor.name}.`);
+    return created;
   }
 
 }

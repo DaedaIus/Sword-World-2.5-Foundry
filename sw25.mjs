@@ -12,6 +12,7 @@ import { initializeEvasionChallenges } from "./module/combat/evasion-challenge.m
 import { criticalFailureHTML, markCriticalFailure } from "./module/rules/critical-failure.mjs";
 import { initializeRecoveryItems } from "./module/rules/recovery-items.mjs";
 import { initializeClassGrants } from "./module/rules/class-grants.mjs";
+import { initializeStandardScenes } from "./module/scenes/standard-scenes.mjs";
 
 Hooks.once("init", () => {
   game.sw25 = { importer: SW25Importer };
@@ -52,6 +53,13 @@ Hooks.once("init", () => {
     types: ["race", "class", "feat", "ability", "weapon", "armour", "skill", "spell", "equipment"],
     makeDefault: true
   });
+
+  game.settings.register("sword-world-25", "standardScenesCreated", {
+    scope:"world",
+    config:false,
+    type:Boolean,
+    default:false
+  });
 });
 
 Hooks.on("preCreateActor", actor => {
@@ -69,6 +77,26 @@ Hooks.once("ready", initializeSpellEffects);
 Hooks.once("ready", initializeEvasionChallenges);
 Hooks.once("ready", initializeRecoveryItems);
 Hooks.once("ready", initializeClassGrants);
+Hooks.once("ready", initializeStandardScenes);
+
+Hooks.on("renderItemDirectory", (_application, html) => {
+  if (!game.user.can("ITEM_CREATE")) return;
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root || root.querySelector("[data-sw25-directory-import]")) return;
+  const actions = root.querySelector(".header-actions") || root.querySelector(".directory-header");
+  if (!actions) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "sw25-directory-import";
+  button.dataset.sw25DirectoryImport = "true";
+  button.innerHTML = '<i class="fas fa-file-import"></i> Import SW2.5 Item';
+  button.title = "Import an item from the Sword World 2.5 Reference Wiki";
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    SW25Importer.open(null);
+  });
+  actions.append(button);
+});
 
 Hooks.on("renderChatMessage", (message, html) => {
   if (message.getFlag("sword-world-25", "naturalPowerAdded")) {

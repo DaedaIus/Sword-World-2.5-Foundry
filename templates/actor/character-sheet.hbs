@@ -1,8 +1,9 @@
-<form class="{{cssClass}} sw25-character-sheet sw25-official-sheet" autocomplete="off">
+<form class="{{cssClass}} sw25-character-sheet sw25-official-sheet sw25-theme-{{sheetStyle}}" autocomplete="off">
   <nav class="sheet-tabs official-tabs" data-group="primary-tabs">
     <button type="button" class="tab-button active" data-tab="overview">Page One</button>
     <button type="button" class="tab-button" data-tab="combat">Page Two</button>
     {{#each classTabs as |classTab|}}<button type="button" class="tab-button" data-tab="{{classTab.id}}">{{classTab.label}}</button>{{/each}}
+    <span class="sheet-appearance-control"><label for="sw25-sheet-style-{{actor.id}}">Style</label><select id="sw25-sheet-style-{{actor.id}}" data-action="set-sheet-style"><option value="paper" {{#if isPaperStyle}}selected{{/if}}>Paper</option><option value="adventurer" {{#if isAdventurerStyle}}selected{{/if}}>Adventurer</option></select></span>
     <span class="rest-controls"><button type="button" data-action="rest" data-hours="3" title="Recover 10% maximum HP and half maximum MP"><i class="fas fa-bed"></i> 3 Hour Rest</button><button type="button" data-action="rest" data-hours="6" title="Recover 20% maximum HP and all MP"><i class="fas fa-bed"></i> 6 Hour Rest</button></span>
   </nav>
 
@@ -15,7 +16,7 @@
           <div class="paper-list class-paper-list">
             {{#each classes as |item|}}
             <div class="paper-row class-row" data-item-id="{{item.id}}">
-              <button type="button" class="paper-link" data-action="edit-item">{{item.name}}</button>
+              <button type="button" class="paper-link" data-action="edit-item">{{#if item.sheetDisplayName}}{{item.sheetDisplayName}}{{else}}{{item.name}}{{/if}}</button>
               <span>{{item.system.category}}</span><span>{{item.displayClassType}}</span>
               <input type="number" data-action="edit-class-level" value="{{item.system.level}}" min="0" title="Level">
               <button type="button" class="row-delete class-delete" data-action="delete-class" title="Delete class"><i class="fas fa-trash"></i></button>
@@ -33,7 +34,8 @@
         <section class="portrait-column">
           <div class="logo-box"><img class="official-logo" src="systems/sword-world-25/assets/sword-world-logo.png" alt="Sword World"></div>
           <div class="portrait-frame">
-            <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" alt="Character portrait">
+            <label class="portrait-source-switch" title="Choose whether this frame edits the character portrait or prototype token image"><span>Portrait</span><input type="checkbox" data-action="toggle-portrait-source" {{checked usingTokenImage}}><span class="portrait-source-slider" aria-hidden="true"></span><span>Token</span></label>
+            <img class="profile-img" src="{{profileImage}}" data-edit="{{profileImagePath}}" title="Edit {{profileImageLabel}} image for {{actor.name}}" alt="{{profileImageLabel}} image">
           </div>
           <div class="name-plaque"><input type="text" name="name" value="{{actor.name}}" placeholder="Character Name"></div>
         </section>
@@ -286,7 +288,7 @@
 
     {{#each classTabs as |classTab|}}
     <div class="sheet-tab" data-tab-panel="{{classTab.id}}">
-      <div class="official-page class-feature-page">
+      <div class="official-page class-feature-page {{classTab.pageClass}}">
         {{#if classTab.isWizard}}<section class="paper-panel class-casting-summary"><h2>{{classTab.label}} Casting</h2><button type="button" class="magic-power-roll" data-action="roll-class-magic-power" data-class-id="{{classTab.classId}}">Magic Power <strong>{{classTab.magicPower}}</strong></button><span>Class Level {{classTab.classLevel}} + Intelligence Modifier</span></section>{{/if}}
         {{#if classTab.isGeomancer}}<section class="paper-panel class-resource-summary"><h2>Qi</h2><label>Heavenly Qi<input type="number" name="system.classResources.geomancer.heavenly" value="{{../system.classResources.geomancer.heavenly}}" min="0"></label><label>Earthly Qi<input type="number" name="system.classResources.geomancer.earthly" value="{{../system.classResources.geomancer.earthly}}" min="0"></label><label>Spirit Qi<input type="number" name="system.classResources.geomancer.spirit" value="{{../system.classResources.geomancer.spirit}}" min="0"></label><button type="button" class="resource-mini-button" data-action="increase-all-qi"><i class="fas fa-plus"></i> All</button><button type="button" class="resource-mini-button" data-action="reset-qi"><i class="fas fa-rotate-left"></i> Reset</button></section>{{/if}}
         {{#if classTab.isAlchemist}}<section class="paper-panel alchemist-card-summary"><h2>Material Cards</h2><div class="material-card-head"><span>Colour</span><span>B</span><span>A</span><span>S</span><span>SS</span></div>{{#each classTab.materialCardRows as |row|}}<div class="material-card-row"><strong>{{row.label}}</strong>{{#each row.cells as |cell|}}<input type="number" name="{{cell.path}}" value="{{cell.value}}" min="0" title="{{row.label}} {{cell.rankLabel}}-Rank">{{/each}}</div>{{/each}}</section>{{/if}}
@@ -295,7 +297,7 @@
         {{#if classTab.isTactician}}<section class="paper-panel class-resource-summary"><h2>Edge</h2><label>Current Edge<input type="number" name="system.classResources.tactician.edge" value="{{../system.classResources.tactician.edge}}" min="0"></label><button type="button" class="resource-mini-button" data-action="increase-edge"><i class="fas fa-plus"></i> Edge</button></section>{{/if}}
         {{#each classTab.sections as |section|}}
         <section class="paper-panel class-feature-box">
-          <h2>{{section.label}} <span class="class-feature-heading-actions"><button type="button" class="panel-add" data-action="add-class-feature-manually" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" title="Add {{section.label}} manually"><i class="fas fa-plus"></i></button><button type="button" class="panel-add" data-action="import-class-feature" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" data-prefix="{{section.prefix}}" title="Import {{section.label}}"><i class="fas fa-file-import"></i></button></span></h2>
+          <h2>{{section.label}} <span class="class-feature-heading-actions"><button type="button" class="panel-add" data-action="add-class-feature-manually" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" title="Add {{section.label}} manually"><i class="fas fa-plus"></i></button><button type="button" class="panel-add" data-action="import-class-feature" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" data-feature-type="{{section.key}}" data-feature-label="{{section.label}}" data-prefix="{{section.prefix}}" title="Import one {{section.label}} entry"><i class="fas fa-file-import"></i></button>{{#if (eq section.key "spell")}}<button type="button" class="panel-add" data-action="bulk-import-spells" data-class-id="{{section.classId}}" data-class-name="{{section.className}}" title="Bulk import a spell list"><i class="fas fa-layer-group"></i></button>{{/if}}</span></h2>
           <div class="class-feature-head"><span>Name</span><span>Requirement</span><span>Cost</span><span>Actions</span></div>
           <div class="class-feature-list">
             {{#if (eq section.key "spell")}}

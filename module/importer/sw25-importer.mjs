@@ -6,7 +6,7 @@ export class SW25Importer {
   static async open(actor = null) {
     const content = `
       <form class="sw25-import-form">
-        <p>Paste a Sword World 2.5 Reference Wiki URL. Supports <strong>race, class, combat feat, armour, and shield pages</strong>.</p>
+        <p>Paste a Sword World 2.5 Reference Wiki URL. Supports <strong>races, classes, combat feats, spells, weapons, armour, shields, and equipment</strong>.</p>
         <div class="form-group">
           <label>Page URL</label>
           <input type="url" name="url" placeholder="http://sw25.wikidot.com/race:grassrunner" autofocus>
@@ -80,6 +80,132 @@ export class SW25Importer {
       default: "import",
       close: () => resolve(null)
     }).render(true));
+  }
+
+  static async openSpellList(actor, options = {}) {
+    if (!actor) throw new Error("Bulk spell importing requires a character.");
+    const content = `<form class="sw25-import-form">
+      <p>Paste a spell-list page and choose the highest spell level to import. Spells from that level and every lower level will be added.</p>
+      <div class="form-group"><label>Spell-list URL</label><input type="url" name="url" value="https://sw25.wikidot.com/spells:magitech" autofocus></div>
+      <div class="form-group"><label>Import through level</label><input type="number" name="level" value="1" min="1" max="99"></div>
+      <p class="notes">Existing spells for this class are ignored.</p>
+    </form>`;
+    return new Promise(resolve => new Dialog({
+      title:`Bulk Import ${options.className || "Class"} Spells`,
+      content,
+      buttons:{
+        import:{
+          icon:'<i class="fas fa-layer-group"></i>',
+          label:"Import Spells",
+          callback:async html => {
+            try {
+              const result = await this.importSpellList(
+                String(html.find('[name="url"]').val() || "").trim(),
+                Number(html.find('[name="level"]').val() || 1),
+                actor,
+                options
+              );
+              ui.notifications.info(`Imported ${result.imported} spells; skipped ${result.skipped} duplicate${result.skipped === 1 ? "" : "s"}.`);
+              resolve(result);
+            } catch (error) {
+              console.error("Sword World 2.5 | Bulk spell import failed", error);
+              ui.notifications.error(error.message || "The spell list could not be imported.");
+              resolve(null);
+            }
+          }
+        },
+        cancel:{ label:"Cancel", callback:()=>resolve(null) }
+      },
+      default:"import",
+      close:()=>resolve(null)
+    }).render(true));
+  }
+
+  static parseSpellList(input = "", pageUrl = "", maximumLevel = Infinity) {
+    const limit = Math.max(1, Number(maximumLevel) || 1);
+    const entries = [];
+    const add = (href, level) => {
+      if (!href || !Number.isFinite(level) || level < 1 || level > limit) return;
+      try {
+        const url = new URL(href, pageUrl);
+        if (!["sw25.wikidot.com", "www.sw25.wikidot.com"].includes(url.hostname.toLowerCase())) return;
+        if (!/^\/spell:/i.test(decodeURIComponent(url.pathname))) return;
+        url.protocol = "https:";
+        url.hash = "";
+        if (!entries.some(entry => entry.url === url.toString())) entries.push({ level, url:url.toString() });
+      } catch { /* Ignore malformed and unrelated links. */ }
+    };
+
+    if (/<(?:html|body|div|table)[\s>]/i.test(String(input)) && typeof DOMParser !== "undefined") {
+      const document = new DOMParser().parseFromString(String(input), "text/html");
+      const content = document.querySelector("#page-content, .page-content, main") || document.body;
+      let level = 0;
+      for (const element of content.querySelectorAll("h1,h2,h3,h4,h5,h6,a")) {
+        if (/^H[1-6]$/.test(element.tagName)) {
+          const match = String(element.textContent || "").match(/\bLevel\s+(\d+)\b/i);
+          if (match) level = Number(match[1]);
+        } else add(element.getAttribute("href"), level);
+      }
+      return entries.sort((a, b) => a.level - b.level || a.url.localeCompare(b.url));
+    }
+
+    let level = 0;
+    for (const line of String(input).replace(/\r/g, "").split("\n")) {
+      const heading = line.match(/^\s*#{1,6}\s*Level\s+(\d+)\b/i);
+      if (heading) { level = Number(heading[1]); continue; }
+      for (const match of line.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) add(match[1], level);
+      for (const match of line.matchAll(/(?:^|\s)(https?:\/\/sw25\.wikidot\.com\/spell:[^\s|)]+)/gi)) add(match[1], level);
+    }
+    return entries.sort((a, b) => a.level - b.level || a.url.localeCompare(b.url));
+  }
+
+  static async importSpellList(value, maximumLevel, actor, options = {}) {
+    if (!actor) throw new Error("Bulk spell importing requires a character.");
+    const url = this.normalizeUrl(value);
+    const slug = decodeURIComponent(new URL(url).pathname.replace(/^\//, ""));
+    if (!slug.toLowerCase().startsWith("spells:")) throw new Error("Enter a spell-list URL beginning with spells:.");
+    const fetched = await this.fetchPage(url);
+    const entries = this.parseSpellList(fetched.text, url, maximumLevel);
+    if (!entries.length) throw new Error("No spell links were found at or below that level.");
+
+    const normalize = value => this.clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const classId = String(options.classId || "");
+    const className = String(options.className || "");
+    const existingNames = new Set(actor.items
+      .filter(item => item.type === "spell" && (
+        String(item.system.classId || "") === classId ||
+        (!item.system.classId && String(item.system.className || item.system.school || "").toLowerCase() === className.toLowerCase())
+      ))
+      .map(item => normalize(item.name)));
+    const existingUrls = new Set(actor.items
+      .filter(item => item.type === "spell")
+      .map(item => String(item.system.sourceUrl || "").replace(/^http:/, "https:"))
+      .filter(Boolean));
+
+    let imported = 0;
+    let skipped = 0;
+    const failures = [];
+    for (const entry of entries) {
+      if (existingUrls.has(entry.url)) { skipped++; continue; }
+      try {
+        const spellPage = await this.fetchPage(entry.url);
+        const parsed = this.parseClassFeature(spellPage.text, entry.url, {
+          classId, className, featureType:"spell"
+        });
+        if (existingNames.has(normalize(parsed.name))) { skipped++; continue; }
+        parsed.level = entry.level;
+        await this.createClassFeature(parsed, actor);
+        existingNames.add(normalize(parsed.name));
+        existingUrls.add(entry.url);
+        imported++;
+      } catch (error) {
+        console.warn(`Sword World 2.5 | Could not import ${entry.url}`, error);
+        failures.push(entry.url);
+      }
+    }
+    actor.sheet?.render(false);
+    if (failures.length) ui.notifications.warn(`${failures.length} spell${failures.length === 1 ? "" : "s"} could not be downloaded; see the console for links.`);
+    return { imported, skipped, failed:failures.length, total:entries.length };
   }
 
   static parseClassFeature(input = "", url = "", options = {}) {
@@ -203,7 +329,6 @@ export class SW25Importer {
   }
 
   static async createClassFeature(parsed, actor) {
-    if (!actor) throw new Error("Class features must be imported onto a character.");
     const system = {
       source: "class",
       classId: parsed.classId,
@@ -219,12 +344,13 @@ export class SW25Importer {
       hasPowerTable: parsed.hasPowerTable,
       specialDamageBands: parsed.specialDamageBands || [],
       school: parsed.className,
-      level: Number(String(parsed.requirement).match(/\d+/)?.[0] || 1),
+      level: Number(parsed.level ?? String(parsed.requirement).match(/\d+/)?.[0] ?? 1),
       metadata: parsed.metadata,
       resourceData: parsed.resourceData,
       description: parsed.description,
       sourceUrl: parsed.sourceUrl
     };
+    if (!actor) return Item.create({ name:parsed.name, type:parsed.type, system });
     const existing = actor.items.find(item =>
       item.type === parsed.type && item.name.toLowerCase() === parsed.name.toLowerCase() &&
       String(item.system.classId || "") === String(parsed.classId || "")
@@ -359,6 +485,11 @@ export class SW25Importer {
       return this.createFeat(parsed, actor);
     }
 
+    if (slug.startsWith("spell:")) {
+      const parsed = this.parseClassFeature(fetched.text, url, { featureType:"spell" });
+      return this.createClassFeature(parsed, actor);
+    }
+
     if (slug.startsWith("items:")) {
       const category = this.weaponCategoryFromUrl(url);
       const weaponCategories = [
@@ -402,7 +533,6 @@ export class SW25Importer {
     }
 
     if (["items:metal-armor", "items:nonmetallic-armor", "items:shields"].includes(slug)) {
-      if (!actor) throw new Error("Armour tables must be imported onto a character.");
       const tables = this.parseArmourTables(fetched.text);
       if (slug === "items:shields") {
         const expectedMinimums = new Map([
@@ -445,7 +575,6 @@ export class SW25Importer {
       "items:class-specific":{ classSpecific:true }
     };
     if (slug in equipmentPages) {
-      if (!actor) throw new Error("Equipment tables must be imported onto a character.");
       const tables = equipmentPages[slug].classSpecific
         ? parseClassSpecificItems(fetched.text, url)
         : parseEquipmentTables(fetched.text, url, equipmentPages[slug]);
@@ -480,7 +609,9 @@ export class SW25Importer {
 
   static async createEquipment(equipment, actor) {
     const documents = this.equipmentDocuments(equipment);
-    const created = await actor.createEmbeddedDocuments("Item", documents);
+    const created = actor
+      ? await actor.createEmbeddedDocuments("Item", documents)
+      : await Item.createDocuments(documents);
     if (created.length === 1) return created[0];
     return { name:`${equipment.name} (${created.length} items)`, items:created };
   }
@@ -1097,13 +1228,15 @@ export class SW25Importer {
     const chosen=await new Promise(resolve=>new Dialog({title:table.name,content:`<form><div class="form-group"><label>Armour</label><select name="item">${rows}</select></div></form>`,buttons:{import:{label:"Import",callback:h=>resolve(Number(h.find('[name=item]').val()))},cancel:{label:"Cancel",callback:()=>resolve(null)}},default:"import",close:()=>resolve(null)}).render(true));
     if (chosen===null) return {name:"Armour import cancelled"};
     const item=table.items[chosen];
-    const [created]=await actor.createEmbeddedDocuments("Item",[{name:item.name,type:"armour",system:{minStrength:item.minStrength,evasion:item.evasion,defence:item.defence,magicalDefence:item.magicalDefence,notes:item.notes,description:item.notes,equipped:true,sourceUrl}}]);
-    actor.sheet?.render(false); return created;
+    const document={name:item.name,type:"armour",system:{minStrength:item.minStrength,evasion:item.evasion,defence:item.defence,magicalDefence:item.magicalDefence,notes:item.notes,description:item.notes,equipped:Boolean(actor),sourceUrl}};
+    const created=actor ? (await actor.createEmbeddedDocuments("Item",[document]))[0] : await Item.create(document);
+    actor?.sheet?.render(false); return created;
   }
 
   static clean(text = "") {
     return String(text)
       .replace(/\u00a0/g, " ")
+      .replace(/\bAbyss Gaer\b/gi, "Abyss Gazer")
       .replace(/\bGrapplers\b/gi, "Martial Artists")
       .replace(/\bGrappler\b/gi, "Martial Artist")
       .replace(/[ \t]+/g, " ")
@@ -1187,7 +1320,7 @@ export class SW25Importer {
   static classType(name, fallback = "") {
     const key = this.clean(name).toLowerCase();
     const warriors = new Set(["battle dancer","fencer","fighter","martial artist","grappler","marksman"]);
-    const wizards = new Set(["abyss gaer","artificer","bibliomancer","conjurer","daemonologist","druid","fairy tamer","priest","sorcerer"]);
+    const wizards = new Set(["abyss gazer","artificer","bibliomancer","conjurer","daemonologist","druid","fairy tamer","priest","sorcerer"]);
     const others = new Set(["alchemist","bard","dark hunter","enhancer","geomancer","heritor","ranger","rider","sage","scout","tactician"]);
     if (warriors.has(key)) return "Warrior";
     if (wizards.has(key)) return "Wizard";

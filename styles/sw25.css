@@ -476,6 +476,8 @@
   min-width: 105px;
   max-width: 160px;
 }
+.official-tabs .sheet-appearance-control { display:flex; align-items:center; gap:4px; margin-left:auto; font-size:9px; font-weight:bold; text-transform:uppercase; white-space:nowrap; }
+.official-tabs .sheet-appearance-control select { width:92px; height:27px; padding:1px 5px; font-size:10px; }
 .official-tabs .rest-controls { display:flex; align-items:center; gap:3px; margin-left:auto; }
 .official-tabs .rest-controls button { display:inline-flex; align-items:center; justify-content:center; gap:4px; width:auto; min-width:86px; height:27px; min-height:0; margin:2px 0 0; padding:2px 7px; font-size:9px; white-space:nowrap; }
 .official-tabs .rest-controls button i { margin:0; }
@@ -817,7 +819,27 @@
 .official-page-one { display:grid; grid-template-columns: 282px 1fr 292px; grid-template-rows: 330px 300px 160px; gap:10px; grid-template-areas:"classes portrait biography" "skills abilities inventory" "skills lower inventory"; }
 .class-box{grid-area:classes}.portrait-column{grid-area:portrait}.biography-box{grid-area:biography}.skills-box{grid-area:skills}.ability-score-box{grid-area:abilities}.inventory-box{grid-area:inventory}.languages-box{grid-area:lower;align-self:start;height:150px}.notes-box{grid-area:lower;align-self:end;height:140px;transform:translateY(150px)}
 .class-paper-list { padding:5px; min-height:170px; }.class-row{display:grid;grid-template-columns:1fr 48px;border-bottom:1px solid #aaa}.class-row input{text-align:center}.xp-strip{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;border-top:2px solid #444;padding:4px}.xp-strip label{display:flex;justify-content:space-between;align-items:center;font-size:11px;text-transform:uppercase}.xp-strip input{width:70px;text-align:right}.xp-strip span{font-size:10px;margin-right:8px}.automatic-feats{display:flex;align-items:center;gap:4px;padding:5px;font-size:10px;text-transform:uppercase}.automatic-feats i{width:13px;height:13px;border:1px solid #555;display:block}
-.portrait-column{display:flex;flex-direction:column;min-width:0}.logo-box{height:68px;display:flex;align-items:center;justify-content:center}.sw-logo{text-align:center;font-weight:bold;font-size:34px;line-height:.72;text-transform:uppercase}.sw-logo small{display:block;font-size:15px;letter-spacing:.12em}.portrait-frame{flex:1;border:3px double #333;overflow:hidden;background:rgba(0,0,0,.035)}.portrait-frame img{width:100%;height:100%;object-fit:contain;border:0}.name-plaque{width:82%;margin:-1px auto 0;padding:7px 12px;border:3px double #333;background:#f6f1e5;z-index:1}.name-plaque input{width:100%;border:0;border-bottom:1px solid #777;background:transparent;text-align:center;font-size:17px;font-weight:bold}
+.portrait-column{display:flex;flex-direction:column;min-width:0}.logo-box{height:68px;display:flex;align-items:center;justify-content:center}.sw-logo{text-align:center;font-weight:bold;font-size:34px;line-height:.72;text-transform:uppercase}.sw-logo small{display:block;font-size:15px;letter-spacing:.12em}.portrait-frame{position:relative;flex:1;border:3px double #333;overflow:hidden;background:rgba(0,0,0,.035)}.portrait-frame img{width:100%;height:100%;object-fit:contain;border:0}.name-plaque{width:82%;margin:-1px auto 0;padding:7px 12px;border:3px double #333;background:#f6f1e5;z-index:1}.name-plaque input{width:100%;border:0;border-bottom:1px solid #777;background:transparent;text-align:center;font-size:17px;font-weight:bold}
+.portrait-source-switch { position:absolute; top:5px; right:5px; z-index:3; display:flex; align-items:center; gap:4px; padding:3px 5px; border:1px solid rgba(29,48,37,.75); border-radius:12px; background:rgba(246,241,229,.92); box-shadow:0 1px 4px rgba(0,0,0,.25); font-size:8px; font-weight:bold; text-transform:uppercase; cursor:pointer; }
+.portrait-source-switch input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+.portrait-source-slider { position:relative; width:26px; height:14px; border-radius:9px; background:#8c887f; transition:background .15s ease; }
+.portrait-source-slider:after { content:""; position:absolute; top:2px; left:2px; width:10px; height:10px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.4); transition:transform .15s ease; }
+.portrait-source-switch input:checked + .portrait-source-slider { background:#24553e; }
+.portrait-source-switch input:checked + .portrait-source-slider:after { transform:translateX(12px); }
+
+/* Optional Adventurer character-sheet presentation. */
+.sw25-theme-adventurer { background:linear-gradient(rgba(235,239,230,.93),rgba(218,226,213,.93)),repeating-linear-gradient(0deg,transparent 0 3px,rgba(25,71,49,.025) 3px 4px); }
+.sw25-theme-adventurer .official-page { background:linear-gradient(rgba(246,247,239,.42),rgba(246,247,239,.32)),#f6f7ef; }
+.sw25-theme-adventurer .official-page-one { background:linear-gradient(rgba(246,247,239,.42),rgba(246,247,239,.32)),url("../assets/adventurer-sheet-background.png") center bottom / 100% auto no-repeat,#f6f7ef; }
+.sw25-theme-adventurer .official-page-two { background:linear-gradient(rgba(246,247,239,.42),rgba(246,247,239,.32)),url("../assets/adventurer-page-two-background.webp") center bottom / 100% auto no-repeat,#f6f7ef; }
+.sw25-theme-adventurer .paper-panel { background:rgba(250,250,241,.62); backdrop-filter:blur(1px); }
+.sw25-theme-adventurer .official-page-one > .class-box,
+.sw25-theme-adventurer .official-page-one > .portrait-column,
+.sw25-theme-adventurer .official-page-one > .biography-box { position:relative; top:auto; z-index:1; align-self:stretch; height:auto; box-sizing:border-box; border-top:10px solid #214f3b; box-shadow:0 5px 9px rgba(20,43,31,.28); }
+.sw25-theme-adventurer .official-page-one > .portrait-column { background:rgba(246,247,239,.66); border-right:3px double #363330; border-left:3px double #363330; backdrop-filter:blur(1px); }
+.sw25-theme-adventurer .official-page-one > .class-box h2,
+.sw25-theme-adventurer .official-page-one > .biography-box h2 { background:#214f3b; color:#f1f5ea; border-bottom-color:#173a2c; text-shadow:0 1px 1px #10281e; }
+.sw25-theme-adventurer .name-plaque { background:rgba(242,246,235,.78); }
 .biography-box{padding-bottom:5px}.biography-box>label{display:flex;align-items:end;padding:3px 8px;gap:6px;font-size:11px}.biography-box>label input{flex:1}.bio-triple,.bio-double{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px;padding:3px 8px}.bio-double{grid-template-columns:1fr 1fr}.bio-triple label,.bio-double label{display:flex;flex-direction:column;font-size:10px}.soulscar-mini{font-size:10px}.soulscar-mini>div{display:flex;gap:3px;padding-top:4px}.soulscar-mini .soulscar-circle{width:14px;height:14px;min-width:14px}.biography-box textarea{width:calc(100% - 16px);height:130px;margin:5px 8px;border:1px solid #999}
 .skill-head,.skill-line{display:grid;grid-template-columns:1fr 42px 55px 34px 34px;align-items:center;min-height:18px;border-bottom:1px solid #aaa;font-size:9px}.skill-head{font-weight:bold;text-transform:uppercase}.skill-line>*{padding:1px 3px}.skill-line button{height:17px;margin:0;padding:0;border:0;background:transparent}.official-skill-groups h3{display:flex;justify-content:space-between;font-size:11px}.official-skill-groups h3 small{font-size:8px;text-transform:none;font-weight:normal}
 .ability-score-box{padding-bottom:5px}.ability-groups{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:8px 5px}.ability-group{text-align:center}.base-diamond{width:58px;height:58px;margin:0 auto -17px;transform:rotate(45deg);border:2px solid #555;background:#f4efe2;position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center}.base-diamond>*{transform:rotate(-45deg)}.base-diamond span{font-size:9px;text-transform:uppercase}.base-diamond input{width:34px;text-align:center;border:0;font-weight:bold}.ability-pair-official{display:grid;grid-template-columns:1fr 1fr;gap:2px}.ability-tower{display:flex;flex-direction:column;align-items:center}.adjust-diamond{width:34px;height:34px;transform:rotate(45deg);border:1px solid #555;background:#f4efe2;display:flex;flex-direction:column;align-items:center;justify-content:center}.adjust-diamond>*{transform:rotate(-45deg)}.adjust-diamond span{font-size:6px}.adjust-diamond input{width:23px;height:13px;text-align:center;border:0;font-size:9px}.growth-box{width:54px;margin-top:9px;border:1px solid #555;font-size:7px;text-transform:uppercase}.growth-box input{width:100%;height:19px;text-align:center;border:0}.score-octagon,.bonus-orb{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #555;background:#f4efe2}.score-octagon{width:66px;height:70px;clip-path:polygon(20% 0,80% 0,100% 20%,100% 80%,80% 100%,20% 100%,0 80%,0 20%)}.score-octagon span{font-size:8px;text-transform:uppercase}.score-octagon strong{font-size:20px}.bonus-orb{width:48px;height:48px;border-radius:50%;margin-top:-5px}.bonus-orb span{font-size:7px;text-transform:uppercase}.bonus-orb strong{font-size:16px}
@@ -1977,3 +1999,113 @@ body.sw25-side-combat-active .combatant-turn-marker,body.sw25-side-combat-active
 .combat-sidebar .combat-tracker .combatant.active { background:transparent !important; }
 .combat-sidebar .combat-tracker .combatant.active::before { content:none !important; display:none !important; border:0 !important; }
 .combat-sidebar .combat-tracker .combatant.active .token-initiative input { --input-background-color:transparent !important; background:transparent !important; }
+
+/* Adventurer theme: keep every sheet box translucent over the artwork. */
+form.sw25-official-sheet.sw25-theme-adventurer .paper-panel {
+  background:rgba(247,246,235,.60);
+  backdrop-filter:blur(1px);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .paper-panel::before,
+form.sw25-official-sheet.sw25-theme-adventurer .paper-panel::after {
+  background:rgba(246,247,239,.62);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .paper-panel > h2,
+form.sw25-official-sheet.sw25-theme-adventurer .paper-panel > h3,
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-head,
+form.sw25-official-sheet.sw25-theme-adventurer .spell-level-heading,
+form.sw25-official-sheet.sw25-theme-adventurer .defense-table .def-head {
+  background-color:rgba(222,216,203,.66);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .official-page-one > .class-box h2,
+form.sw25-official-sheet.sw25-theme-adventurer .official-page-one > .biography-box h2 {
+  background-color:rgba(33,79,59,.88);
+}
+form.sw25-official-sheet.sw25-theme-adventurer input,
+form.sw25-official-sheet.sw25-theme-adventurer textarea,
+form.sw25-official-sheet.sw25-theme-adventurer select {
+  background-color:rgba(255,252,239,.34);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .base-diamond,
+form.sw25-official-sheet.sw25-theme-adventurer .adjust-diamond,
+form.sw25-official-sheet.sw25-theme-adventurer .growth-box,
+form.sw25-official-sheet.sw25-theme-adventurer .temporary-box,
+form.sw25-official-sheet.sw25-theme-adventurer .score-octagon,
+form.sw25-official-sheet.sw25-theme-adventurer .bonus-orb,
+form.sw25-official-sheet.sw25-theme-adventurer .resource-shield,
+form.sw25-official-sheet.sw25-theme-adventurer .adventurer-orb,
+form.sw25-official-sheet.sw25-theme-adventurer .name-plaque,
+form.sw25-official-sheet.sw25-theme-adventurer .portrait-source-switch,
+form.sw25-official-sheet.sw25-theme-adventurer .feat-details,
+form.sw25-official-sheet.sw25-theme-adventurer .work-skill-details,
+form.sw25-official-sheet.sw25-theme-adventurer .work-check-details {
+  background-color:rgba(244,239,226,.64);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .resource-heart::after,
+form.sw25-official-sheet.sw25-theme-adventurer .mp-crystal::after {
+  background:rgba(238,231,214,.68);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .panel-add,
+form.sw25-official-sheet.sw25-theme-adventurer .resistance-strip button,
+form.sw25-official-sheet.sw25-theme-adventurer .combat-weapon-row .weapon-trash {
+  background-color:rgba(245,240,229,.56);
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-abyss-gazer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/abyss-gazer-background.png") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-artificer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/artificer-background.png") right bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-sorcerer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/sorcerer-background.webp") center 38% / cover no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-bibliomancer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/bibliomancer-background.png") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-conjurer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/conjurer-background.webp") right bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-priest {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/priest-background.webp") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-enhancer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/enhancer-background.webp") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-bard {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/bard-background.webp") center 32% / cover no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-fairy-tamer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/fairy-tamer-background.webp") center bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-tactician {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/tactician-background.webp") center 35% / cover no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-heritor {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/heritor-background.webp") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-rider {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/adventurer-sheet-background.png") center bottom / 100% auto no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-dark-hunter,
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-daemonologist {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/abyss-gazer-background.png") left bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-alchemist,
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-geomancer {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/alchemist-background.png") center bottom / contain no-repeat,#f6f7ef;
+}
+form.sw25-official-sheet.sw25-theme-adventurer .class-feature-page.class-page-druid {
+  background:linear-gradient(rgba(246,247,239,.38),rgba(246,247,239,.28)),url("../assets/druid-background.png") center bottom / 100% auto no-repeat,#f6f7ef;
+}
+
+.sw25-directory-import {
+  flex:0 0 auto;
+  width:auto;
+  white-space:nowrap;
+}
+
+.sw25-official-sheet [data-item-id][draggable="true"] {
+  cursor:grab;
+}
+.sw25-official-sheet [data-item-id][draggable="true"]:active {
+  cursor:grabbing;
+}

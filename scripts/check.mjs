@@ -15,6 +15,7 @@ assert(manifest.id === "sword-world-25", "The system id must remain sword-world-
 assert(Number(manifest.compatibility.minimum) === 14, "Minimum Foundry version must be 14.");
 assert(Number(manifest.compatibility.verified) === 14, "Verified Foundry version must be 14.");
 assert(manifest.documentTypes?.Actor?.character, "Character Actor type is missing.");
+assert(manifest.documentTypes?.Actor?.monster, "Monster Actor type is missing.");
 
 const declaredFiles = [
   ...manifest.esmodules,

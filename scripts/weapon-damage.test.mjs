@@ -4,6 +4,8 @@ import { abilityBonus, isGunWeapon, isWarriorClass, weaponDamageParts } from "..
 const classItem = (name, classType, level = 1) => ({ type: "class", name, system: { classType, level } });
 assert.equal(isWarriorClass(classItem("Fighter", "Warrior")), true);
 assert.equal(isWarriorClass(classItem("FIGHTER", "warrior")), true);
+assert.equal(isWarriorClass(classItem("Grappler", "")), true);
+assert.equal(isWarriorClass(classItem("Martial Artist", "")), true);
 assert.equal(isWarriorClass(classItem("Artificer", "Wizard")), false);
 
 assert.equal(isGunWeapon({ name: "Long Gun", system: {} }), true);
@@ -19,6 +21,7 @@ const actorSystem = {
 };
 assert.equal(abilityBonus(actorSystem, "strength"), 3);
 assert.equal(abilityBonus(actorSystem, "intelligence"), 3);
+assert.equal(abilityBonus({ abilityBases:{ skill:11 }, abilityAdjustments:{ a:{ temporary:1 } } }, "dexterity"), 2);
 
 const sword = { name: "Sword", system: { category: "Sword", powerTable: { "7": 5 }, additionalDamage: 1 } };
 assert.deepEqual(
